@@ -1,0 +1,77 @@
+/* Professional Medical Color Palette */
+:root {
+  /* Primary Colors */
+  --primary-navy: #1a365d;
+  --primary-blue: #2563eb;
+  --primary-light: #3b82f6;
+
+  /* Secondary Grays */
+  --gray-900: #111827;
+  --gray-800: #1f2937;
+  --gray-700: #374151;
+  --gray-600: #4b5563;
+  --gray-500: #6b7280;
+  --gray-400: #9ca3af;
+  --gray-300: #d1d5db;
+  --gray-200: #e5e7eb;
+  --gray-100: #f3f4f6;
+  --gray-50: #f8fafc;
+
+  /* Background Colors */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f1f5f9;
+  --bg-tertiary: #f8fafc;
+  --bg-hover: #f1f5f9;
+
+  /* Accent Colors */
+  --success: #059669;
+  --success-light: #10b981;
+  --warning: #d97706;
+  --warning-light: #f59e0b;
+  --error: #dc2626;
+  --error-light: #ef4444;
+
+  /* Text Colors */
+  --text-primary: #111827;
+  --text-secondary: #374151;
+  --text-tertiary: #6b7280;
+  --text-light: #9ca3af;
+
+  /* Border Colors */
+  --border-primary: #e5e7eb;
+  --border-secondary: #d1d5db;
+  --border-light: #f3f4f6;
+
+  /* Shadow */
+  --shadow-sm: 0 1px 2px 0 rgba(17, 24, 39, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(17, 24, 39, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(17, 24, 39, 0.1);
+}
+
+/* Global Responsive Base Styles */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+  overflow-x: hidden;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}

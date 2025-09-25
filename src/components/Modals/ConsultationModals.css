@@ -1,0 +1,750 @@
+/* ===========================================
+   CONSULTATION MODALS - SPECIFIC STYLES
+   Patient Consultation, Vital Signs, Glasgow Coma Scale
+   =========================================== */
+
+/* Consultation Modal Layout */
+.consultation-modal {
+  max-width: 1200px;
+  width: 95%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.consultation-form-content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Section Navigation Tabs */
+.section-tabs {
+  display: flex;
+  flex-direction: column;
+  min-width: 220px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-right: 1px solid rgba(229, 231, 235, 0.8);
+  padding: 1rem 0;
+}
+
+.section-tab {
+  padding: 1rem 1.5rem;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 500;
+  color: #6b7280;
+  border-right: 3px solid transparent;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  position: relative;
+}
+
+.section-tab::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  transition: width 0.3s ease;
+}
+
+.section-tab:hover::before {
+  width: 4px;
+}
+
+.section-tab:hover {
+  background: rgba(248, 250, 252, 0.8);
+  color: #374151;
+  transform: translateX(4px);
+}
+
+.section-tab.active {
+  background: linear-gradient(135deg, rgba(30, 60, 114, 0.1) 0%, rgba(248, 250, 252, 0.9) 100%);
+  color: #1e3c72;
+  font-weight: 600;
+  border-right-color: #1e3c72;
+  box-shadow: inset 4px 0 0 #1e3c72;
+}
+
+.section-tab.active::before {
+  width: 4px;
+}
+
+.tab-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.tab-label {
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.tab-indicator {
+  margin-left: auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.section-tab.completed .tab-indicator {
+  opacity: 1;
+}
+
+.section-tab.has-errors .tab-indicator {
+  background: #ef4444;
+  opacity: 1;
+}
+
+/* Section Content */
+.section-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.3);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(30, 60, 114, 0.3) transparent;
+}
+
+.section-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.section-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.section-content::-webkit-scrollbar-thumb {
+  background: rgba(30, 60, 114, 0.3);
+  border-radius: 3px;
+}
+
+/* Form Sections */
+.form-section {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  border: 1px solid rgba(229, 231, 235, 0.5);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.form-section h3 {
+  margin: 0 0 1.5rem 0;
+  color: #1e3c72;
+  font-size: 1.25rem;
+  font-weight: 700;
+  border-bottom: 2px solid rgba(30, 60, 114, 0.1);
+  padding-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.form-section h3::before {
+  content: '';
+  width: 4px;
+  height: 24px;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  border-radius: 2px;
+}
+
+.form-section h4 {
+  margin: 0 0 1rem 0;
+  color: #374151;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Consultation Specific Styles */
+.patient-info-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, rgba(30, 60, 114, 0.05) 0%, rgba(248, 250, 252, 0.8) 100%);
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  border: 1px solid rgba(30, 60, 114, 0.1);
+}
+
+.patient-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1.125rem;
+}
+
+.patient-details {
+  flex: 1;
+}
+
+.patient-name {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 0.25rem 0;
+}
+
+.patient-id {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-family: 'Courier New', monospace;
+  font-weight: 500;
+}
+
+.patient-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+/* Radio and Checkbox Groups */
+.radio-group,
+.checkbox-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.radio-label,
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 500;
+  margin: 0;
+  cursor: pointer;
+  padding: 0.75rem;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(229, 231, 235, 0.3);
+}
+
+.radio-label:hover,
+.checkbox-label:hover {
+  background: rgba(248, 250, 252, 0.8);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.radio-label input[type="radio"],
+.checkbox-label input[type="checkbox"] {
+  margin: 0;
+  width: 18px;
+  height: 18px;
+  accent-color: #1e3c72;
+  flex-shrink: 0;
+}
+
+/* Pain Scale Styles */
+.pain-scale-container {
+  background: linear-gradient(135deg, rgba(239, 246, 255, 0.5) 0%, rgba(255, 255, 255, 0.8) 100%);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  margin-top: 1rem;
+}
+
+.pain-slider {
+  width: 100%;
+  margin: 1.5rem 0;
+  height: 8px;
+  border-radius: 4px;
+  background: #e5e7eb;
+  outline: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.pain-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.pain-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 15px rgba(30, 60, 114, 0.4);
+}
+
+.pain-slider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.pain-faces {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 1rem 0;
+}
+
+.pain-face {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.pain-emoji {
+  font-size: 1.5rem;
+  transition: transform 0.3s ease;
+}
+
+.pain-face:hover .pain-emoji {
+  transform: scale(1.2);
+}
+
+.pain-number {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.pain-value {
+  text-align: center;
+  font-weight: 700;
+  color: #1e3c72;
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Injury Details */
+.injury-details {
+  margin-top: 1rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(254, 242, 242, 0.5) 0%, rgba(255, 255, 255, 0.8) 100%);
+  border-radius: 12px;
+  border: 1px solid rgba(254, 202, 202, 0.5);
+}
+
+.injury-types {
+  margin-bottom: 1.5rem;
+}
+
+.injury-types label {
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.75rem;
+  display: block;
+}
+
+/* Glasgow Coma Scale Styles */
+.gcs-container {
+  background: linear-gradient(135deg, rgba(240, 249, 255, 0.5) 0%, rgba(255, 255, 255, 0.8) 100%);
+  padding: 1.5rem;
+  border-radius: 16px;
+  border: 1px solid rgba(186, 230, 253, 0.5);
+}
+
+.gcs-category {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  border: 1px solid rgba(224, 242, 254, 0.5);
+  transition: all 0.3s ease;
+}
+
+.gcs-category:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.gcs-category h4 {
+  color: #1e3c72;
+  margin-bottom: 0.75rem;
+  font-size: 1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.gcs-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.gcs-options .radio-label {
+  padding: 0.75rem;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.gcs-options .radio-label:hover {
+  background: rgba(240, 249, 255, 0.8);
+}
+
+.gcs-score {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  color: white;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 0.875rem;
+  margin-right: 0.75rem;
+  flex-shrink: 0;
+}
+
+.gcs-total {
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  color: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  text-align: center;
+  margin-top: 1rem;
+  box-shadow: 0 4px 15px rgba(30, 60, 114, 0.3);
+}
+
+.gcs-total h4 {
+  color: white;
+  margin-bottom: 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.gcs-total-score {
+  font-size: 2.5rem;
+  font-weight: 900;
+  margin-bottom: 0.5rem;
+}
+
+.gcs-interpretation {
+  font-size: 0.875rem;
+  opacity: 0.9;
+  font-style: italic;
+}
+
+/* SOAP Notes Styles */
+.soap-container {
+  background: linear-gradient(135deg, rgba(249, 250, 251, 0.5) 0%, rgba(255, 255, 255, 0.8) 100%);
+  padding: 1.5rem;
+  border-radius: 16px;
+  border: 1px solid rgba(229, 231, 235, 0.5);
+}
+
+.soap-notes {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.soap-note {
+  position: relative;
+}
+
+.soap-note label {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e3c72;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.soap-letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  color: white;
+  border-radius: 50%;
+  font-weight: 800;
+  font-size: 0.875rem;
+}
+
+.soap-note textarea {
+  min-height: 120px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+/* Vital Signs Grid */
+.vitals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.vital-input {
+  position: relative;
+}
+
+.vital-unit {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 500;
+  pointer-events: none;
+}
+
+/* Nested Form Sections */
+.nested-form {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(249, 250, 251, 0.6);
+  border-radius: 10px;
+  border: 1px solid rgba(229, 231, 235, 0.3);
+}
+
+/* Progress Indicator */
+.consultation-progress {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background: rgba(248, 250, 252, 0.8);
+  border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+}
+
+.progress-bar {
+  flex: 1;
+  height: 4px;
+  background: #e5e7eb;
+  border-radius: 2px;
+  margin: 0 1rem;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #1e3c72, #2a5298);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .consultation-modal {
+    max-width: 95%;
+    width: 95%;
+  }
+
+  .radio-group,
+  .checkbox-group {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+
+  .vitals-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .consultation-modal {
+    width: 100%;
+    height: 95vh;
+    max-height: 95vh;
+    border-radius: 16px;
+    margin: 0.5rem;
+  }
+
+  .consultation-form-content {
+    flex-direction: column;
+  }
+
+  .section-tabs {
+    flex-direction: row;
+    overflow-x: auto;
+    min-width: unset;
+    border-right: none;
+    border-bottom: 1px solid rgba(229, 231, 235, 0.8);
+    padding: 0.5rem 0;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .section-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .section-tab {
+    white-space: nowrap;
+    border-bottom: 3px solid transparent;
+    border-right: none;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    min-width: 120px;
+  }
+
+  .section-tab::before {
+    display: none;
+  }
+
+  .section-tab.active {
+    border-bottom: 3px solid #1e3c72;
+    border-right: none;
+    box-shadow: none;
+  }
+
+  .section-content {
+    padding: 1.5rem;
+  }
+
+  .patient-info-bar {
+    padding: 1rem;
+  }
+
+  .patient-details {
+    min-width: 0;
+  }
+
+  .patient-meta {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .radio-group,
+  .checkbox-group {
+    grid-template-columns: 1fr;
+  }
+
+  .vitals-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .pain-faces {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+  }
+
+  .pain-face {
+    min-width: 60px;
+  }
+
+  .gcs-container {
+    padding: 1rem;
+  }
+
+  .gcs-category {
+    padding: 0.75rem;
+  }
+
+  .soap-container {
+    padding: 1rem;
+  }
+
+  .consultation-progress {
+    padding: 0.75rem 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .consultation-modal {
+    margin: 0.25rem;
+    height: 98vh;
+    max-height: 98vh;
+    border-radius: 12px;
+  }
+
+  .section-content {
+    padding: 1rem;
+  }
+
+  .section-tab {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+    min-width: 100px;
+  }
+
+  .form-section {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .form-section h3 {
+    font-size: 1.125rem;
+    margin-bottom: 1rem;
+  }
+
+  .patient-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+
+  .patient-name {
+    font-size: 1rem;
+  }
+
+  .vitals-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pain-emoji {
+    font-size: 1.25rem;
+  }
+
+  .pain-number {
+    font-size: 0.7rem;
+  }
+
+  .gcs-score {
+    width: 24px;
+    height: 24px;
+    font-size: 0.75rem;
+  }
+
+  .soap-letter {
+    width: 24px;
+    height: 24px;
+    font-size: 0.75rem;
+  }
+
+  .gcs-total-score {
+    font-size: 2rem;
+  }
+}

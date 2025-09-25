@@ -1,0 +1,251 @@
+/* Dashboard Layout Styles */
+.dashboard-layout {
+  display: flex;
+  height: 100vh;
+  background: #f0f2f5;
+  overflow: hidden;
+}
+
+/* Main Content - starts after sidebar width */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+  margin-left: 260px; /* Default sidebar width */
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dashboard-layout.sidebar-collapsed .main-content {
+  margin-left: 70px; /* Collapsed sidebar width */
+}
+
+.content-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #f0f2f5;
+  /* Remove padding here since pages have their own padding */
+}
+
+/* Fix page container padding overlap */
+.content-wrapper .page-container {
+  padding: 20px 24px;
+  min-height: calc(100vh - 70px); /* Subtract topbar height */
+  background: #f0f2f5;
+  margin: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .main-content {
+    margin-left: 260px; /* Keep sidebar visible on tablets */
+  }
+
+  .content-wrapper .page-container {
+    padding: 18px 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-layout {
+    position: relative;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* On mobile, main content takes full width */
+  .main-content {
+    margin-left: 0 !important;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .content-wrapper {
+    padding: 0;
+    height: calc(100vh - 70px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .content-wrapper .page-container {
+    padding: 12px;
+    min-height: auto;
+    background: #f0f2f5;
+  }
+
+  /* Mobile sidebar overlay */
+  .dashboard-layout .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
+
+  .dashboard-layout.sidebar-open .sidebar {
+    transform: translateX(0);
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Backdrop for mobile sidebar */
+  .dashboard-layout.sidebar-open::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 150;
+    pointer-events: auto;
+    backdrop-filter: blur(2px);
+    animation: backdropFadeIn 0.3s ease;
+  }
+
+  @keyframes backdropFadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* Prevent main content from receiving clicks when sidebar is open */
+  .dashboard-layout.sidebar-open .main-content {
+    pointer-events: none;
+  }
+
+  .dashboard-layout.sidebar-open .main-content > * {
+    pointer-events: auto;
+  }
+
+  /* Mobile topbar adjustments */
+  .topbar {
+    height: 60px;
+    padding: 0 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .content-wrapper {
+    height: calc(100vh - 60px);
+  }
+
+  .content-wrapper .page-container {
+    min-height: calc(100vh - 60px);
+  }
+}
+
+@media (max-width: 480px) {
+  .content-wrapper .page-container {
+    padding: 8px;
+  }
+
+  .topbar {
+    height: 56px;
+    padding: 0 8px;
+  }
+
+  .content-wrapper {
+    height: calc(100vh - 56px);
+  }
+
+  .content-wrapper .page-container {
+    min-height: calc(100vh - 56px);
+  }
+
+  /* Ensure sidebar is properly sized on very small screens */
+  .dashboard-layout .sidebar {
+    width: 260px;
+    min-width: 260px;
+  }
+}
+
+@media (max-width: 360px) {
+  .content-wrapper .page-container {
+    padding: 6px;
+  }
+
+  .dashboard-layout .sidebar {
+    width: 240px;
+    min-width: 240px;
+  }
+}
+
+/* Touch-specific optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .content-wrapper {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+
+  /* Improve scrolling performance on mobile */
+  .content-wrapper .page-container {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+
+  /* Better touch interaction for sidebar backdrop */
+  .dashboard-layout.sidebar-open::before {
+    touch-action: manipulation;
+  }
+}
+
+/* Landscape orientation adjustments */
+@media (max-width: 768px) and (orientation: landscape) {
+  .topbar {
+    height: 50px;
+    padding: 0 16px;
+  }
+
+  .content-wrapper {
+    height: calc(100vh - 50px);
+  }
+
+  .content-wrapper .page-container {
+    padding: 10px 16px;
+    min-height: calc(100vh - 50px);
+  }
+
+  .dashboard-layout .sidebar {
+    width: 240px;
+  }
+}
+
+/* Safe area support for modern mobile devices */
+@supports (padding: max(0px)) {
+  @media (max-width: 768px) {
+    .content-wrapper .page-container {
+      padding-left: max(12px, env(safe-area-inset-left));
+      padding-right: max(12px, env(safe-area-inset-right));
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+
+    .topbar {
+      padding-left: max(12px, env(safe-area-inset-left));
+      padding-right: max(12px, env(safe-area-inset-right));
+    }
+  }
+
+  @media (max-width: 480px) {
+    .content-wrapper .page-container {
+      padding-left: max(8px, env(safe-area-inset-left));
+      padding-right: max(8px, env(safe-area-inset-right));
+      padding-bottom: max(8px, env(safe-area-inset-bottom));
+    }
+
+    .topbar {
+      padding-left: max(8px, env(safe-area-inset-left));
+      padding-right: max(8px, env(safe-area-inset-right));
+    }
+  }
+}
