@@ -888,6 +888,194 @@
   }
 }
 
+/* Vitals Signs Styles */
+.vitals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.vital-signs-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.vital-signs-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+  border-color: #ef4444;
+}
+
+.vital-signs-card .card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-bottom: 1px solid #fca5a5;
+}
+
+.vital-signs-card .vital-patient {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.vital-signs-card .patient-info .patient-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 2px;
+  line-height: 1.4;
+}
+
+.vital-signs-card .patient-info .patient-id {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-family: 'Courier New', monospace;
+}
+
+.vital-signs-card .vital-date {
+  font-size: 0.875rem;
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.vital-signs-card .card-content {
+  padding: 20px;
+}
+
+.vital-signs-card .consultation-info {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.vital-signs-card .consultation-case,
+.vital-signs-card .consultation-date {
+  font-size: 0.875rem;
+  margin-bottom: 4px;
+}
+
+.vital-signs-card .consultation-case {
+  font-weight: 600;
+  color: #374151;
+  font-family: 'Courier New', monospace;
+}
+
+.vital-signs-card .consultation-date {
+  color: #6b7280;
+}
+
+.vital-signs-card .vital-measurements {
+  margin-bottom: 16px;
+}
+
+.measurement-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.measurement-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.measurement-item:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.measurement-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+.measurement-value {
+  font-size: 0.9rem;
+  color: #111827;
+  font-weight: 600;
+}
+
+.measurement-value.pain-scale {
+  color: #dc2626;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.pain-info {
+  margin: 16px 0;
+  padding: 12px;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+}
+
+.injury-info {
+  margin: 16px 0;
+  padding: 12px;
+  background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%);
+  border: 1px solid #fbbf24;
+  border-radius: 8px;
+}
+
+.injury-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #92400e;
+  margin-bottom: 8px;
+}
+
+.injury-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.injury-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #ffffff;
+  text-transform: capitalize;
+}
+
+.vital-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  border-top: 1px solid #f3f4f6;
+  padding-top: 16px;
+}
+
+.vital-actions button {
+  flex: 1;
+  padding: 10px 16px;
+  font-size: 0.875rem;
+  border-radius: 6px;
+}
+
 /* Animation for cards */
 @keyframes fadeInUp {
   from {
@@ -902,7 +1090,8 @@
 
 .patient-card,
 .consultation-card,
-.overview-card {
+.overview-card,
+.vital-signs-card {
   animation: fadeInUp 0.5s ease-out;
 }
 
@@ -911,3 +1100,97 @@
 .patient-card:nth-child(4) { animation-delay: 0.3s; }
 .patient-card:nth-child(5) { animation-delay: 0.4s; }
 .patient-card:nth-child(6) { animation-delay: 0.5s; }
+
+/* Responsive vitals styles */
+@media (max-width: 1200px) {
+  .vitals-grid {
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 16px;
+  }
+
+  .measurement-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .vitals-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .vital-signs-card .card-header {
+    padding: 12px 16px;
+  }
+
+  .vital-signs-card .card-content {
+    padding: 16px;
+  }
+
+  .measurement-grid {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+  }
+
+  .measurement-item {
+    padding: 10px;
+  }
+
+  .vital-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .vital-actions button {
+    width: 100%;
+    padding: 12px 16px;
+    font-weight: 600;
+  }
+}
+
+@media (max-width: 480px) {
+  .vital-signs-card .patient-info .patient-name {
+    font-size: 0.9rem;
+  }
+
+  .vital-signs-card .patient-info .patient-id {
+    font-size: 0.7rem;
+  }
+
+  .measurement-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .measurement-item {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+  }
+
+  .measurement-label {
+    font-size: 0.7rem;
+    margin-bottom: 0;
+  }
+
+  .measurement-value {
+    font-size: 0.85rem;
+  }
+
+  .injury-types {
+    gap: 4px;
+  }
+
+  .injury-badge {
+    padding: 3px 6px;
+    font-size: 0.7rem;
+  }
+
+  .vital-actions button {
+    padding: 10px 14px;
+    font-size: 0.8rem;
+    min-height: 44px;
+  }
+}

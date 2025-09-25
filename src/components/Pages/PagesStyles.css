@@ -1,6 +1,6 @@
 /* Pages Common Styles */
 .page-container {
-  /* Padding is now handled by DashboardLayout.css to avoid double padding */
+  /* Padding is now handled by DashboardPage.css to avoid double padding */
   min-height: 100vh;
   background: var(--bg-secondary);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;

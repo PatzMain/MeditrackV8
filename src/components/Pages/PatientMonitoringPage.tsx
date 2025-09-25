@@ -5,7 +5,8 @@ import {
   patientMonitoringService,
   type Patient,
   type Consultation,
-  type PatientStats
+  type PatientStats,
+  type VitalSigns
 } from '../../services/supabaseService';
 import AddPatientModal from '../Modals/PatientModals/AddPatientModal';
 import ViewPatientModal from '../Modals/PatientModals/ViewPatientModal';
@@ -20,11 +21,14 @@ const PatientMonitoringPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [patients, setPatients] = useState<Patient[]>([]);
   const [consultations, setConsultations] = useState<Consultation[]>([]);
+  const [vitalSignsData, setVitalSignsData] = useState<(VitalSigns & { consultation: Consultation; patient?: Patient })[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [vitalsSearchQuery, setVitalsSearchQuery] = useState('');
+  const [vitalsDateFilter, setVitalsDateFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(12);
 
@@ -68,10 +72,46 @@ const PatientMonitoringPage: React.FC = () => {
     }
   }, []);
 
+  const fetchVitalSigns = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Get all consultations first
+      const consultationsData = await patientMonitoringService.getConsultations(true);
+
+      // For each consultation, get vital signs
+      const vitalsPromises = consultationsData.map(async (consultation) => {
+        const vitals = await patientMonitoringService.getVitalSignsByConsultationId(consultation.id);
+        return vitals.map(vital => ({
+          ...vital,
+          consultation,
+          patient: consultation.patient
+        }));
+      });
+
+      const allVitalsArrays = await Promise.all(vitalsPromises);
+      const flattenedVitals = allVitalsArrays.flat();
+
+      // Sort by recorded_at date (most recent first)
+      flattenedVitals.sort((a, b) => new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime());
+
+      setVitalSignsData(flattenedVitals);
+    } catch (error: any) {
+      console.error('Error fetching vital signs:', error);
+      setError(`Failed to load vital signs: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchPatients();
     fetchConsultations();
-  }, [fetchPatients, fetchConsultations]);
+    if (activeTab === 'vitals') {
+      fetchVitalSigns();
+    }
+  }, [fetchPatients, fetchConsultations, fetchVitalSigns, activeTab]);
 
   const stats = useMemo((): PatientStats => {
     const today = new Date().toISOString().split('T')[0];
@@ -103,7 +143,32 @@ const PatientMonitoringPage: React.FC = () => {
     return filteredPatients.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredPatients, currentPage, itemsPerPage]);
 
-  const totalPages = Math.ceil(filteredPatients.length / itemsPerPage);
+  const filteredVitalSigns = useMemo(() => {
+    return vitalSignsData.filter(vital => {
+      if (!vital.patient) return false;
+
+      const searchLower = vitalsSearchQuery.toLowerCase();
+      const patientNameMatch =
+        vital.patient.first_name.toLowerCase().includes(searchLower) ||
+        vital.patient.last_name.toLowerCase().includes(searchLower) ||
+        vital.patient.patient_id.toLowerCase().includes(searchLower);
+
+      const dateMatch = !vitalsDateFilter ||
+        vital.recorded_at.split('T')[0] === vitalsDateFilter;
+
+      return patientNameMatch && dateMatch;
+    });
+  }, [vitalSignsData, vitalsSearchQuery, vitalsDateFilter]);
+
+  const paginatedVitalSigns = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredVitalSigns.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredVitalSigns, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(
+    activeTab === 'vitals' ? filteredVitalSigns.length / itemsPerPage :
+    filteredPatients.length / itemsPerPage
+  );
 
   const handleAddPatient = () => {
     setIsAddPatientModalOpen(true);
@@ -746,13 +811,255 @@ const PatientMonitoringPage: React.FC = () => {
 
       {activeTab === 'vitals' && (
         <div className="tab-content">
-          <div className="coming-soon">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-            </svg>
-            <h3>Vital Signs Monitoring</h3>
-            <p>This feature will be implemented to track and monitor patient vital signs in real-time.</p>
+          {/* Vitals Filters */}
+          <div className="filters-section">
+            <div className="filters-row">
+              <div className="search-box-large">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
+                  <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="2"/>
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search by patient name or ID..."
+                  value={vitalsSearchQuery}
+                  onChange={(e) => setVitalsSearchQuery(e.target.value)}
+                />
+              </div>
+
+              <div className="filter-group">
+                <label>Date:</label>
+                <input
+                  type="date"
+                  value={vitalsDateFilter}
+                  onChange={(e) => setVitalsDateFilter(e.target.value)}
+                />
+              </div>
+
+              <div className="action-buttons">
+                <button
+                  className="btn-secondary"
+                  onClick={() => {
+                    setVitalsSearchQuery('');
+                    setVitalsDateFilter('');
+                  }}
+                >
+                  Clear Filters
+                </button>
+                <button
+                  className="btn-primary"
+                  onClick={fetchVitalSigns}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M1 4v6h6"/>
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                  </svg>
+                  Refresh
+                </button>
+              </div>
+            </div>
           </div>
+
+          {/* Vitals Grid */}
+          {loading ? (
+            <div className="loading-message">Loading vital signs...</div>
+          ) : error ? (
+            <div className="error-container">
+              <div className="error-message">{error}</div>
+              <button className="btn-secondary" onClick={fetchVitalSigns}>
+                Retry
+              </button>
+            </div>
+          ) : paginatedVitalSigns.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                </svg>
+              </div>
+              <div className="empty-state-content">
+                <h3>No Vital Signs Found</h3>
+                <p>
+                  {vitalsSearchQuery || vitalsDateFilter
+                    ? 'No vital signs match your current filters.'
+                    : 'There are no vital signs recorded in the system yet.'
+                  }
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="vitals-grid">
+              {paginatedVitalSigns.map(vital => (
+                <div key={vital.id} className="vital-signs-card">
+                  <div className="card-header">
+                    <div className="vital-patient">
+                      <div className="patient-info">
+                        <div className="patient-name">
+                          {vital.patient?.first_name} {vital.patient?.last_name}
+                        </div>
+                        <div className="patient-id">ID: {vital.patient?.patient_id}</div>
+                      </div>
+                    </div>
+                    <div className="vital-date">
+                      {new Date(vital.recorded_at).toLocaleDateString()}
+                    </div>
+                  </div>
+
+                  <div className="card-content">
+                    <div className="consultation-info">
+                      <div className="consultation-case">Case: {vital.consultation?.case_number}</div>
+                      <div className="consultation-date">
+                        {vital.consultation?.consultation_date} at {vital.consultation?.time_in}
+                      </div>
+                    </div>
+
+                    <div className="vital-measurements">
+                      <div className="measurement-grid">
+                        {vital.blood_pressure_systolic && vital.blood_pressure_diastolic && (
+                          <div className="measurement-item">
+                            <span className="measurement-label">Blood Pressure</span>
+                            <span className="measurement-value">
+                              {vital.blood_pressure_systolic}/{vital.blood_pressure_diastolic} mmHg
+                            </span>
+                          </div>
+                        )}
+
+                        {vital.temperature && (
+                          <div className="measurement-item">
+                            <span className="measurement-label">Temperature</span>
+                            <span className="measurement-value">{vital.temperature}°C</span>
+                          </div>
+                        )}
+
+                        {vital.pulse_rate && (
+                          <div className="measurement-item">
+                            <span className="measurement-label">Pulse Rate</span>
+                            <span className="measurement-value">{vital.pulse_rate} bpm</span>
+                          </div>
+                        )}
+
+                        {vital.respiratory_rate && (
+                          <div className="measurement-item">
+                            <span className="measurement-label">Respiratory Rate</span>
+                            <span className="measurement-value">{vital.respiratory_rate} /min</span>
+                          </div>
+                        )}
+
+                        {vital.oxygen_saturation && (
+                          <div className="measurement-item">
+                            <span className="measurement-label">Oxygen Saturation</span>
+                            <span className="measurement-value">{vital.oxygen_saturation}%</span>
+                          </div>
+                        )}
+
+                        {vital.height && (
+                          <div className="measurement-item">
+                            <span className="measurement-label">Height</span>
+                            <span className="measurement-value">{vital.height} cm</span>
+                          </div>
+                        )}
+
+                        {vital.weight && (
+                          <div className="measurement-item">
+                            <span className="measurement-label">Weight</span>
+                            <span className="measurement-value">{vital.weight} kg</span>
+                          </div>
+                        )}
+
+                        {vital.mode_of_arrival && (
+                          <div className="measurement-item">
+                            <span className="measurement-label">Mode of Arrival</span>
+                            <span className="measurement-value">{vital.mode_of_arrival}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {vital.patient_in_pain && (
+                        <div className="pain-info">
+                          <div className="measurement-item">
+                            <span className="measurement-label">Pain Scale</span>
+                            <span className="measurement-value pain-scale">
+                              {vital.pain_scale}/10
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {vital.patient_has_injuries && (
+                        <div className="injury-info">
+                          <div className="injury-label">Injuries Reported:</div>
+                          <div className="injury-types">
+                            {vital.injury_abrasion && <span className="injury-badge">Abrasion</span>}
+                            {vital.injury_contusion && <span className="injury-badge">Contusion</span>}
+                            {vital.injury_fracture && <span className="injury-badge">Fracture</span>}
+                            {vital.injury_laceration && <span className="injury-badge">Laceration</span>}
+                            {vital.injury_puncture && <span className="injury-badge">Puncture</span>}
+                            {vital.injury_sprain && <span className="injury-badge">Sprain</span>}
+                            {vital.injury_other && <span className="injury-badge">Other: {vital.injury_other}</span>}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="vital-actions">
+                      <button
+                        className="btn-primary"
+                        onClick={() => handleViewConsultationDetails(vital.consultation)}
+                      >
+                        View Consultation
+                      </button>
+                      <button
+                        className="btn-info"
+                        onClick={() => handleOpenVitalSignsModal(vital.consultation)}
+                        disabled={vital.consultation?.status !== 'active'}
+                      >
+                        Update Vitals
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {totalPages > 1 && !loading && !error && activeTab === 'vitals' && (
+            <div className="pagination">
+              <button
+                className="pagination-btn"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(currentPage - 1)}
+              >
+                Previous
+              </button>
+
+              <div className="pagination-pages">
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                  const page = i + 1;
+                  return (
+                    <button
+                      key={page}
+                      className={`pagination-page ${page === currentPage ? 'active' : ''}`}
+                      onClick={() => setCurrentPage(page)}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="pagination-info">
+                Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredVitalSigns.length)} of {filteredVitalSigns.length} vital signs
+              </div>
+
+              <button
+                className="pagination-btn"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(currentPage + 1)}
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       )}
 

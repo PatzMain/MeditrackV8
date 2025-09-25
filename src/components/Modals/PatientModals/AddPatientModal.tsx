@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   patientMonitoringService,
   activityService,
@@ -69,6 +69,7 @@ const AddPatientModal: React.FC<AddPatientModalProps> = ({ isOpen, onClose, onSa
   const [activeStep, setActiveStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const modalBodyRef = useRef<HTMLDivElement>(null);
 
   const [patientData, setPatientData] = useState<PatientFormData>({
     first_name: '',
@@ -167,6 +168,10 @@ const AddPatientModal: React.FC<AddPatientModalProps> = ({ isOpen, onClose, onSa
     if (validateStep(activeStep)) {
       setActiveStep(prev => Math.min(prev + 1, 3));
       setError(null);
+      // Scroll to top of modal content
+      if (modalBodyRef.current) {
+        modalBodyRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     } else {
       setError('Please fill in all required fields');
     }
@@ -175,6 +180,10 @@ const AddPatientModal: React.FC<AddPatientModalProps> = ({ isOpen, onClose, onSa
   const handlePrevious = () => {
     setActiveStep(prev => Math.max(prev - 1, 1));
     setError(null);
+    // Scroll to top of modal content
+    if (modalBodyRef.current) {
+      modalBodyRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const handleSave = async () => {
@@ -326,7 +335,7 @@ const AddPatientModal: React.FC<AddPatientModalProps> = ({ isOpen, onClose, onSa
           </div>
         </div>
 
-        <div className="modal-body">
+        <div className="modal-body" ref={modalBodyRef}>
           {error && (
             <div className="error-message">
               {error}

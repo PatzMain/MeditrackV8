@@ -339,6 +339,7 @@ const LogsPage: React.FC = () => {
 
       {/* Logs Table */}
       <div className="logs-table-container">
+        {/* Desktop Table View */}
         <div className="data-table">
           <table>
             <thead>
@@ -420,6 +421,66 @@ const LogsPage: React.FC = () => {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Cards View */}
+        <div className="logs-mobile-cards">
+          {paginatedLogs.map((log) => (
+            <div
+              key={log.id}
+              id={`log-item-${log.id}`}
+              className={`logs-mobile-card severity-${log.severity} ${highlightedLogId === log.id ? 'highlighted-item' : ''}`}
+            >
+              <div className="mobile-card-header">
+                <div className="mobile-timestamp">
+                  {new Date(log.timestamp).toLocaleString()}
+                </div>
+                <div className="mobile-severity">
+                  {getSeverityIcon(log.severity.toUpperCase())}
+                  <span className={`severity-text ${log.severity}`}>
+                    {log.severity.toUpperCase()}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mobile-card-content">
+                <div className="mobile-user-section">
+                  <div className="mobile-user-avatar">
+                    {(log.users?.username?.[0] || 'U').toUpperCase()}
+                  </div>
+                  <div className="mobile-user-info">
+                    <div className="mobile-user-name">{log.users?.username || 'Unknown'}</div>
+                    <div className="mobile-user-role">{log.users?.role || 'Unknown'}</div>
+                  </div>
+                </div>
+
+                <div className="mobile-action-category">
+                  <div className="mobile-action-badge">
+                    {log.action.replace('_', ' ')}
+                  </div>
+                  <span className={`category-badge ${getCategoryColor(log.category || 'System')}`}>
+                    {log.category || 'System'}
+                  </span>
+                </div>
+
+                <div className="mobile-description">
+                  <div className="mobile-description-text">{log.description}</div>
+                  {log.details && (
+                    <div className="mobile-description-details">{JSON.stringify(log.details)}</div>
+                  )}
+                </div>
+
+                <div className="mobile-card-actions">
+                  <button className="btn-icon" title="View Details" onClick={() => { setSelectedItem(log); setIsViewModalOpen(true); }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z" stroke="currentColor" strokeWidth="2"/>
+                      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

@@ -28,114 +28,25 @@
 .topbar-left {
   display: flex;
   align-items: center;
-  min-width: 250px;
-}
-
-.topbar-brand {
-  display: none;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.brand-name {
-  font-size: 1.5rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, var(--primary-navy) 0%, var(--primary-blue) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  letter-spacing: -0.5px;
-  line-height: 1;
-  margin: 0;
-}
-
-.brand-tagline {
-  font-size: 0.75rem;
-  color: #6b7280;
-  font-weight: 500;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
+  min-width: auto;
+  width: 60px; /* Fixed width for mobile menu button */
+  flex-shrink: 0;
 }
 
 .topbar-center {
   flex: 1;
-  max-width: 600px;
+  min-width: 0; /* Allow shrinking */
+  margin: 0 16px; /* Space from left and right sections */
 }
 
 .topbar-right {
   display: flex;
   align-items: center;
-  gap: 16px;
-  min-width: 320px;
-  justify-content: flex-end;
+  min-width: auto;
+  width: auto;
+  flex-shrink: 0;
 }
 
-.topbar-date {
-  display: flex;
-  align-items: center;
-}
-
-.date-display {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-  padding: 8px 12px;
-  background: rgba(30, 60, 114, 0.05);
-  border-radius: 8px;
-  border: 1px solid rgba(30, 60, 114, 0.1);
-}
-
-.date-text {
-  font-size: 0.75rem;
-  color: #1e3c72;
-  font-weight: 600;
-  line-height: 1;
-}
-
-.time-text {
-  font-size: 0.7rem;
-  color: #6b7280;
-  font-weight: 500;
-  line-height: 1;
-}
-
-.user-welcome {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-  min-width: 0;
-  flex-shrink: 1;
-}
-
-.welcome-text {
-  font-size: 0.75rem;
-  color: #6b7280;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  max-width: 120px;
-}
-
-.user-name {
-  font-size: 0.875rem;
-  color: #1f2937;
-  font-weight: 700;
-  background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  max-width: 140px;
-}
 
 .user-role-badge {
   padding: 6px 14px;
@@ -178,7 +89,7 @@
 
 /* Mobile Menu Button */
 .mobile-menu-btn {
-  display: none;
+  display: flex;
   background: rgba(30, 60, 114, 0.1);
   border: 1px solid rgba(30, 60, 114, 0.2);
   border-radius: 8px;
@@ -211,20 +122,8 @@
     padding: 0 20px;
   }
 
-  .topbar-left {
-    min-width: 200px;
-  }
-
-  .brand-name {
-    font-size: 1.375rem;
-  }
-
   .topbar-center {
-    max-width: 500px;
-  }
-
-  .topbar-right {
-    min-width: 280px;
+    margin: 0 12px;
   }
 }
 
@@ -235,55 +134,8 @@
     height: 60px;
   }
 
-  .mobile-menu-btn {
-    display: flex;
-  }
-
-  .topbar-left {
-    min-width: auto;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .topbar-brand {
-    display: flex;
-  }
-
-  .brand-name {
-    font-size: 1.25rem;
-  }
-
-  .brand-tagline {
-    font-size: 0.7rem;
-  }
-
   .topbar-center {
-    flex: 1;
-    min-width: 0;
-    max-width: none;
-  }
-
-  .topbar-right {
-    min-width: auto;
-    gap: 12px;
-  }
-
-  .date-display {
-    padding: 6px 8px;
-    border-radius: 6px;
-  }
-
-  .date-text {
-    font-size: 0.7rem;
-  }
-
-  .time-text {
-    font-size: 0.65rem;
-  }
-
-  .user-welcome {
-    display: none;
+    margin: 0 8px;
   }
 
   .user-role-badge {
@@ -309,33 +161,8 @@
     height: 56px;
   }
 
-  .topbar-left {
-    gap: 8px;
-  }
-
-  .brand-name {
-    font-size: 1.125rem;
-    white-space: nowrap;
-  }
-
-  .brand-tagline {
-    display: none;
-  }
-
-  .topbar-right {
-    gap: 8px;
-  }
-
-  .date-display {
-    padding: 4px 6px;
-  }
-
-  .date-text {
-    font-size: 0.65rem;
-  }
-
-  .time-text {
-    font-size: 0.6rem;
+  .topbar-center {
+    margin: 0 6px;
   }
 
   .user-role-badge {
@@ -358,16 +185,8 @@
     gap: 4px;
   }
 
-  .brand-name {
-    font-size: 1rem;
-  }
-
-  .topbar-right {
-    gap: 6px;
-  }
-
-  .date-display {
-    display: none;
+  .topbar-center {
+    margin: 0 4px;
   }
 
   .user-role-badge {
@@ -397,10 +216,6 @@
     min-height: 36px;
   }
 
-  .brand-name {
-    font-size: 1.125rem;
-  }
-
   .user-role-badge {
     padding: 3px 6px;
     font-size: 0.65rem;
@@ -420,11 +235,7 @@
   }
 
   /* Better touch feedback */
-  .topbar-right > * {
-    transition: transform 0.1s ease;
-  }
-
-  .topbar-right > *:active {
+  .user-role-badge:active {
     transform: scale(0.95);
   }
 }

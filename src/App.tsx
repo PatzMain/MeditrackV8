@@ -2,8 +2,8 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginForm from './components/LoginForm';
-import DashboardLayout from './components/Layout/DashboardLayout';
 import DashboardPage from './components/Pages/DashboardPage';
+import MainDashboardPage from './components/Pages/MainDashboardPage';
 import PatientMonitoringPage from './components/Pages/PatientMonitoringPage';
 import InventoryPage from './components/Pages/InventoryPage';
 import ArchivesPage from './components/Pages/ArchivesPage';
@@ -63,9 +63,9 @@ const AppContent: React.FC = () => {
         path="/dashboard"
         element={
           <ProtectedRoute>
-            <DashboardLayout>
-              <DashboardPage />
-            </DashboardLayout>
+            <DashboardPage>
+              <MainDashboardPage />
+            </DashboardPage>
           </ProtectedRoute>
         }
       />
@@ -73,9 +73,9 @@ const AppContent: React.FC = () => {
         path="/patient-monitoring"
         element={
           <ProtectedRoute>
-            <DashboardLayout>
+            <DashboardPage>
               <PatientMonitoringPage />
-            </DashboardLayout>
+            </DashboardPage>
           </ProtectedRoute>
         }
       />
@@ -83,9 +83,9 @@ const AppContent: React.FC = () => {
         path="/inventory"
         element={
           <ProtectedRoute>
-            <DashboardLayout>
+            <DashboardPage>
               <InventoryPage />
-            </DashboardLayout>
+            </DashboardPage>
           </ProtectedRoute>
         }
       />
@@ -93,9 +93,9 @@ const AppContent: React.FC = () => {
         path="/archives"
         element={
           <ProtectedRoute>
-            <DashboardLayout>
+            <DashboardPage>
               <ArchivesPage />
-            </DashboardLayout>
+            </DashboardPage>
           </ProtectedRoute>
         }
       />
@@ -103,9 +103,9 @@ const AppContent: React.FC = () => {
         path="/logs"
         element={
           <ProtectedRoute>
-            <DashboardLayout>
+            <DashboardPage>
               <LogsPage />
-            </DashboardLayout>
+            </DashboardPage>
           </ProtectedRoute>
         }
       />
@@ -113,9 +113,9 @@ const AppContent: React.FC = () => {
         path="/profile"
         element={
           <ProtectedRoute>
-            <DashboardLayout>
+            <DashboardPage>
               <ProfilePage />
-            </DashboardLayout>
+            </DashboardPage>
           </ProtectedRoute>
         }
       />
@@ -123,9 +123,9 @@ const AppContent: React.FC = () => {
         path="/admin-management"
         element={
           <SuperAdminRoute>
-            <DashboardLayout>
+            <DashboardPage>
               <AdminManagementPage />
-            </DashboardLayout>
+            </DashboardPage>
           </SuperAdminRoute>
         }
       />

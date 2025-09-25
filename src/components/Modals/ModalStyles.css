@@ -435,13 +435,14 @@
   .modal-overlay {
     padding: 0.5rem;
     align-items: flex-start;
-    padding-top: 2rem;
+    padding-top: 0.5rem;
   }
 
   .modal-container {
     max-width: 100%;
-    max-height: 95vh;
+    max-height: calc(100vh - 1rem);
     border-radius: 0.75rem;
+    margin-top: 0;
   }
 
   .modal-header {
@@ -535,12 +536,12 @@
 @media (max-width: 480px) {
   .modal-overlay {
     padding: 0.25rem;
-    padding-top: 1rem;
+    padding-top: 0.25rem;
   }
 
   .modal-container {
     border-radius: 0.5rem;
-    max-height: 98vh;
+    max-height: calc(100vh - 0.5rem);
   }
 
   .modal-header {
@@ -620,12 +621,12 @@
 @media (max-width: 360px) {
   .modal-overlay {
     padding: 0.125rem;
-    padding-top: 0.5rem;
+    padding-top: 0.125rem;
   }
 
   .modal-container {
     border-radius: 0.375rem;
-    max-height: 99vh;
+    max-height: calc(100vh - 0.25rem);
   }
 
   .modal-header {
