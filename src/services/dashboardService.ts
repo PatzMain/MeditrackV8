@@ -1,4 +1,4 @@
-import { inventoryService, userService, activityService } from './supabaseService';
+import { inventoryService, userService, activityService, patientMonitoringService } from './supabaseService';
 
 export interface DashboardStats {
   totalItems: number;
@@ -75,6 +75,54 @@ export interface ExpirationAnalysisData {
   timeframe: string;
   expiringItems: number;
   categories: string[];
+  [key: string]: any;
+}
+
+// New interfaces for enhanced dashboard
+export interface EquipmentStatusData {
+  status: string;
+  count: number;
+  percentage: number;
+  color: string;
+  [key: string]: any;
+}
+
+export interface MedicineStatusData {
+  status: string;
+  count: number;
+  percentage: number;
+  color: string;
+  [key: string]: any;
+}
+
+export interface SuppliesStatusData {
+  status: string;
+  count: number;
+  percentage: number;
+  color: string;
+  [key: string]: any;
+}
+
+export interface PatientTrendData {
+  date: string;
+  patients: number;
+  consultations: number;
+  newPatients: number;
+  [key: string]: any;
+}
+
+export interface EnhancedActivityTrendData {
+  date: string;
+  actions: number;
+  users: number;
+  categories: {
+    [key: string]: number;
+  };
+  severity: {
+    info: number;
+    warning: number;
+    error: number;
+  };
   [key: string]: any;
 }
 
@@ -425,6 +473,317 @@ class DashboardService {
     } catch (error) {
       console.error('Error fetching top performing categories:', error);
       throw error;
+    }
+  }
+
+  // New methods for enhanced dashboard
+  async getEquipmentStatus(): Promise<EquipmentStatusData[]> {
+    try {
+      // Get all items with their classifications
+      const allItems = await inventoryService.getAllItems();
+      const classifications = await inventoryService.getClassifications();
+
+      // Create a map of classification_id to classification name
+      const classificationMap = new Map();
+      classifications.forEach((classification: any) => {
+        classificationMap.set(classification.id, classification.name.toLowerCase());
+      });
+
+      // Filter equipment items based on classification name
+      const equipmentItems = allItems.filter((item: any) => {
+        const classificationName = classificationMap.get(item.classification_id);
+        return classificationName && (
+          classificationName.includes('equipment') ||
+          classificationName.includes('device') ||
+          classificationName.includes('instrument')
+        );
+      });
+
+      const statusCounts: { [key: string]: number } = {
+        active: 0,
+        maintenance: 0
+      };
+
+      equipmentItems.forEach((item: any) => {
+        if (item.status === 'active') statusCounts.active++;
+        else if (item.status === 'maintenance') statusCounts.maintenance++;
+      });
+
+      const total = equipmentItems.length || 1;
+      const statusColors = {
+        active: '#10B981',
+        maintenance: '#F59E0B'
+      };
+
+      return Object.entries(statusCounts).map(([status, count]) => ({
+        status: status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        count,
+        percentage: Math.round((count / total) * 100),
+        color: statusColors[status as keyof typeof statusColors]
+      }));
+    } catch (error) {
+      console.error('Error fetching equipment status:', error);
+      return [];
+    }
+  }
+
+  async getMedicineStatus(): Promise<MedicineStatusData[]> {
+    try {
+      const allItems = await inventoryService.getAllItems();
+      const classifications = await inventoryService.getClassifications();
+
+      // Create a map of classification_id to classification name
+      const classificationMap = new Map();
+      classifications.forEach((classification: any) => {
+        classificationMap.set(classification.id, classification.name.toLowerCase());
+      });
+
+      // Filter medicine items based on classification name or category
+      const medicineItems = allItems.filter((item: any) => {
+        const classificationName = classificationMap.get(item.classification_id);
+        const categoryName = item.category?.toLowerCase() || '';
+
+        return (
+          categoryName.includes('medicine') ||
+          categoryName.includes('drug') ||
+          categoryName.includes('pharmaceutical') ||
+          (classificationName && (
+            classificationName.includes('medicine') ||
+            classificationName.includes('drug') ||
+            classificationName.includes('pharmaceutical')
+          ))
+        );
+      });
+
+      const statusCounts: { [key: string]: number } = {
+        active: 0,
+        low_stock: 0,
+        out_of_stock: 0,
+        expired: 0
+      };
+
+      const currentDate = new Date();
+
+      medicineItems.forEach((item: any) => {
+        if (item.status === 'expired' || (item.expiration_date && new Date(item.expiration_date) < currentDate)) {
+          statusCounts.expired++;
+        } else if (item.status === 'out_of_stock' || item.stock_quantity === 0) {
+          statusCounts.out_of_stock++;
+        } else if (item.status === 'low_stock') {
+          statusCounts.low_stock++;
+        } else if (item.status === 'active') {
+          statusCounts.active++;
+        }
+      });
+
+      const total = medicineItems.length || 1;
+      const statusColors = {
+        active: '#10B981',
+        low_stock: '#F59E0B',
+        out_of_stock: '#EF4444',
+        expired: '#8B5CF6'
+      };
+
+      return Object.entries(statusCounts).map(([status, count]) => ({
+        status: status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        count,
+        percentage: Math.round((count / total) * 100),
+        color: statusColors[status as keyof typeof statusColors]
+      }));
+    } catch (error) {
+      console.error('Error fetching medicine status:', error);
+      return [];
+    }
+  }
+
+  async getSuppliesStatus(): Promise<SuppliesStatusData[]> {
+    try {
+      const allItems = await inventoryService.getAllItems();
+      const classifications = await inventoryService.getClassifications();
+
+      // Create a map of classification_id to classification name
+      const classificationMap = new Map();
+      classifications.forEach((classification: any) => {
+        classificationMap.set(classification.id, classification.name.toLowerCase());
+      });
+
+      // Filter supplies items based on classification name or category
+      const suppliesItems = allItems.filter((item: any) => {
+        const classificationName = classificationMap.get(item.classification_id);
+        const categoryName = item.category?.toLowerCase() || '';
+
+        return (
+          categoryName.includes('supplies') ||
+          categoryName.includes('supply') ||
+          categoryName.includes('material') ||
+          categoryName.includes('consumable') ||
+          (classificationName && (
+            classificationName.includes('supplies') ||
+            classificationName.includes('supply') ||
+            classificationName.includes('material') ||
+            classificationName.includes('consumable')
+          ))
+        );
+      });
+
+      const statusCounts: { [key: string]: number } = {
+        active: 0,
+        low_stock: 0,
+        out_of_stock: 0,
+        expired: 0
+      };
+
+      const currentDate = new Date();
+
+      suppliesItems.forEach((item: any) => {
+        if (item.status === 'expired' || (item.expiration_date && new Date(item.expiration_date) < currentDate)) {
+          statusCounts.expired++;
+        } else if (item.status === 'out_of_stock' || item.stock_quantity === 0) {
+          statusCounts.out_of_stock++;
+        } else if (item.status === 'low_stock') {
+          statusCounts.low_stock++;
+        } else if (item.status === 'active') {
+          statusCounts.active++;
+        }
+      });
+
+      const total = suppliesItems.length || 1;
+      const statusColors = {
+        active: '#10B981',
+        low_stock: '#F59E0B',
+        out_of_stock: '#EF4444',
+        expired: '#8B5CF6'
+      };
+
+      return Object.entries(statusCounts).map(([status, count]) => ({
+        status: status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        count,
+        percentage: Math.round((count / total) * 100),
+        color: statusColors[status as keyof typeof statusColors]
+      }));
+    } catch (error) {
+      console.error('Error fetching supplies status:', error);
+      return [];
+    }
+  }
+
+  async getPatientTrends(days: number = 30): Promise<PatientTrendData[]> {
+    try {
+      // Get all patients and consultations data
+      const [allPatients, allConsultations] = await Promise.all([
+        patientMonitoringService.getPatients(),
+        patientMonitoringService.getConsultations(false)
+      ]);
+
+      const trends: PatientTrendData[] = [];
+      const currentDate = new Date();
+
+      for (let i = days - 1; i >= 0; i--) {
+        const date = new Date(currentDate);
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+
+        const nextDate = new Date(date);
+        nextDate.setDate(nextDate.getDate() + 1);
+
+        // Filter consultations for this specific day
+        const dayConsultations = allConsultations.filter((consultation: any) => {
+          const consultationDate = new Date(consultation.consultation_date);
+          return consultationDate >= date && consultationDate < nextDate;
+        });
+
+        // Get new patients registered on this day
+        const newPatientsCount = allPatients.filter((patient: any) => {
+          const createdDate = new Date(patient.created_at);
+          return createdDate >= date && createdDate < nextDate;
+        }).length;
+
+        // Get total active patients up to this date
+        const totalPatientsCount = allPatients.filter((patient: any) => {
+          const createdDate = new Date(patient.created_at);
+          return createdDate <= date && patient.status === 'active';
+        }).length;
+
+        trends.push({
+          date: dateStr,
+          patients: totalPatientsCount || 0,
+          consultations: dayConsultations.length || 0,
+          newPatients: newPatientsCount || 0
+        });
+      }
+
+      return trends;
+    } catch (error) {
+      console.error('Error fetching patient trends:', error);
+      // Fallback to basic stats if detailed data is unavailable
+      const trends: PatientTrendData[] = [];
+      const currentDate = new Date();
+
+      for (let i = days - 1; i >= 0; i--) {
+        const date = new Date(currentDate);
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+
+        trends.push({
+          date: dateStr,
+          patients: 0,
+          consultations: 0,
+          newPatients: 0
+        });
+      }
+
+      return trends;
+    }
+  }
+
+  async getEnhancedActivityTrends(days: number = 30): Promise<EnhancedActivityTrendData[]> {
+    try {
+      const activities = await activityService.getLogs();
+      const currentDate = new Date();
+      const trends: EnhancedActivityTrendData[] = [];
+
+      for (let i = days - 1; i >= 0; i--) {
+        const date = new Date(currentDate);
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+
+        const nextDate = new Date(date);
+        nextDate.setDate(nextDate.getDate() + 1);
+
+        const dayActivities = activities.filter((activity: any) => {
+          const activityDate = new Date(activity.timestamp);
+          return activityDate >= date && activityDate < nextDate;
+        });
+
+        // Count activities by category
+        const categoryCounts: { [key: string]: number } = {};
+        const severityCounts = { info: 0, warning: 0, error: 0 };
+
+        dayActivities.forEach((activity: any) => {
+          const category = activity.category || 'Other';
+          categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+
+          const severity = activity.severity || 'info';
+          if (severityCounts[severity as keyof typeof severityCounts] !== undefined) {
+            severityCounts[severity as keyof typeof severityCounts]++;
+          }
+        });
+
+        const uniqueUsers = new Set(dayActivities.map((activity: any) => activity.user_id));
+
+        trends.push({
+          date: dateStr,
+          actions: dayActivities.length,
+          users: uniqueUsers.size,
+          categories: categoryCounts,
+          severity: severityCounts
+        });
+      }
+
+      return trends;
+    } catch (error) {
+      console.error('Error fetching enhanced activity trends:', error);
+      return [];
     }
   }
 }

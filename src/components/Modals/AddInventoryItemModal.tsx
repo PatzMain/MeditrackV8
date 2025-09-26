@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useSimpleModalBodyScroll } from '../../hooks/useModalBodyScroll';
 import './Modal.css';
 import './InventoryModals.css';
 
@@ -11,6 +12,8 @@ interface AddInventoryItemModalProps {
 }
 
 const AddInventoryItemModal: React.FC<AddInventoryItemModalProps> = ({ onClose, onSave, department, classifications, activeClassificationTab }) => {
+  // Prevent body scroll when modal is open
+  useSimpleModalBodyScroll(true);
 
   // Filter classifications based on active tab
   const filteredClassifications = classifications.filter(c =>

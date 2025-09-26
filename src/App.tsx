@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginForm from './components/LoginForm';
 import DashboardPage from './components/Pages/DashboardPage';
-import MainDashboardPage from './components/Pages/MainDashboardPage';
 import PatientMonitoringPage from './components/Pages/PatientMonitoringPage';
 import InventoryPage from './components/Pages/InventoryPage';
 import ArchivesPage from './components/Pages/ArchivesPage';
@@ -63,9 +62,7 @@ const AppContent: React.FC = () => {
         path="/dashboard"
         element={
           <ProtectedRoute>
-            <DashboardPage>
-              <MainDashboardPage />
-            </DashboardPage>
+            <DashboardPage />
           </ProtectedRoute>
         }
       />
