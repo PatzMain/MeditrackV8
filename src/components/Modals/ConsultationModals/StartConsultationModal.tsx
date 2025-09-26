@@ -272,12 +272,20 @@ const StartConsultationModal: React.FC<StartConsultationModalProps> = ({
                     <span className="info-value">{patient.patient_type}</span>
                   </div>
                 </div>
-                {patient.course_department && (
+                {(patient.course || patient.department) && (
                   <div className="info-row">
-                    <div className="info-item">
-                      <span className="info-label">Department:</span>
-                      <span className="info-value">{patient.course_department}</span>
-                    </div>
+                    {patient.course && (
+                      <div className="info-item">
+                        <span className="info-label">Course:</span>
+                        <span className="info-value">{patient.course}</span>
+                      </div>
+                    )}
+                    {patient.department && (
+                      <div className="info-item">
+                        <span className="info-label">Department:</span>
+                        <span className="info-value">{patient.department}</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

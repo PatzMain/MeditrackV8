@@ -7,6 +7,7 @@ import {
   type Consultation
 } from '../../../services/supabaseService';
 import '../PatientModals/PatientModals.css';
+import '../ConsultationModals.css';
 
 interface ConsultationAttachmentsModalProps {
   isOpen: boolean;

@@ -6,7 +6,7 @@ import {
   type GlasgowComaScale,
   type Consultation
 } from '../../../services/supabaseService';
-import '../PatientModals/PatientModals.css';
+import '../ConsultationModals.css';
 
 interface GlasgowComaScaleModalProps {
   isOpen: boolean;

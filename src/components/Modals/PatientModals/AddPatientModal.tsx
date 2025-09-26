@@ -4,6 +4,15 @@ import {
   activityService,
   type Patient
 } from '../../../services/supabaseService';
+import {
+  COURSE_OPTIONS,
+  DEPARTMENT_OPTIONS,
+  PATIENT_TYPE_OPTIONS,
+  SEX_OPTIONS,
+  CIVIL_STATUS_OPTIONS,
+  STUDENT_LEVEL_OPTIONS,
+  YEAR_LEVEL_OPTIONS
+} from '../../../constants/patientOptions';
 import './PatientModals.css';
 
 interface AddPatientModalProps {
@@ -25,7 +34,8 @@ interface PatientFormData {
 
   // Patient Type and Classification
   patient_type: 'Employee' | 'Dependent' | 'Student' | 'OPD' | '';
-  course_department: string;
+  course: string;
+  department: string;
   student_level: string;
   year_level: number | '';
 
@@ -81,7 +91,8 @@ const AddPatientModal: React.FC<AddPatientModalProps> = ({ isOpen, onClose, onSa
     birthday: '',
     address: '',
     patient_type: '',
-    course_department: '',
+    course: '',
+    department: '',
     student_level: '',
     year_level: '',
     phone: '',
@@ -207,7 +218,8 @@ const AddPatientModal: React.FC<AddPatientModalProps> = ({ isOpen, onClose, onSa
         civil_status: patientData.civil_status || undefined,
         birthday: patientData.birthday || undefined,
         address: patientData.address || undefined,
-        course_department: patientData.course_department || undefined,
+        course: patientData.course || undefined,
+        department: patientData.department || undefined,
         student_level: patientData.student_level || undefined,
         year_level: patientData.year_level || undefined,
         phone: patientData.phone || undefined,
@@ -270,7 +282,8 @@ const AddPatientModal: React.FC<AddPatientModalProps> = ({ isOpen, onClose, onSa
       birthday: '',
       address: '',
       patient_type: '',
-      course_department: '',
+      course: '',
+      department: '',
       student_level: '',
       year_level: '',
       phone: '',
@@ -399,8 +412,11 @@ const AddPatientModal: React.FC<AddPatientModalProps> = ({ isOpen, onClose, onSa
                     onChange={(e) => handlePatientDataChange('sex', e.target.value)}
                   >
                     <option value="">Select sex</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
+                    {SEX_OPTIONS.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -411,10 +427,11 @@ const AddPatientModal: React.FC<AddPatientModalProps> = ({ isOpen, onClose, onSa
                     onChange={(e) => handlePatientDataChange('civil_status', e.target.value)}
                   >
                     <option value="">Select civil status</option>
-                    <option value="Single">Single</option>
-                    <option value="Married">Married</option>
-                    <option value="Divorced">Divorced</option>
-                    <option value="Widowed">Widowed</option>
+                    {CIVIL_STATUS_OPTIONS.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -449,21 +466,12 @@ const AddPatientModal: React.FC<AddPatientModalProps> = ({ isOpen, onClose, onSa
                     required
                   >
                     <option value="">Select patient type</option>
-                    <option value="Student">Student</option>
-                    <option value="Employee">Employee</option>
-                    <option value="Dependent">Dependent</option>
-                    <option value="OPD">OPD</option>
+                    {PATIENT_TYPE_OPTIONS.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
                   </select>
-                </div>
-
-                <div className="form-group">
-                  <label>Department/Course</label>
-                  <input
-                    type="text"
-                    value={patientData.course_department}
-                    onChange={(e) => handlePatientDataChange('course_department', e.target.value)}
-                    placeholder="Enter department or course"
-                  />
                 </div>
 
                 {patientData.patient_type === 'Student' && (
@@ -475,24 +483,64 @@ const AddPatientModal: React.FC<AddPatientModalProps> = ({ isOpen, onClose, onSa
                         onChange={(e) => handlePatientDataChange('student_level', e.target.value)}
                       >
                         <option value="">Select level</option>
-                        <option value="highschool">High School</option>
-                        <option value="college">College</option>
+                        {STUDENT_LEVEL_OPTIONS.map(option => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
                       </select>
                     </div>
 
                     <div className="form-group">
                       <label>Year Level</label>
-                      <input
-                        type="number"
+                      <select
                         value={patientData.year_level}
                         onChange={(e) => handlePatientDataChange('year_level', e.target.value ? parseInt(e.target.value) : '')}
-                        placeholder={patientData.student_level === 'highschool' ? 'Grade (7-12)' : 'Year (1-6)'}
-                        min={patientData.student_level === 'highschool' ? 7 : 1}
-                        max={patientData.student_level === 'highschool' ? 12 : 6}
-                      />
+                      >
+                        <option value="">Select year level</option>
+                        {patientData.student_level && YEAR_LEVEL_OPTIONS[patientData.student_level as keyof typeof YEAR_LEVEL_OPTIONS]?.map(option => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </>
                 )}
+
+                {(patientData.patient_type === 'Student' && patientData.student_level === 'college') ||
+                 patientData.patient_type === 'Employee' ||
+                 patientData.patient_type === 'OPD' ? (
+                  <div className="form-group">
+                    <label>Course</label>
+                    <select
+                      value={patientData.course}
+                      onChange={(e) => handlePatientDataChange('course', e.target.value)}
+                    >
+                      <option value="">Select course</option>
+                      {COURSE_OPTIONS.map(course => (
+                        <option key={course} value={course}>
+                          {course}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
+
+                <div className="form-group">
+                  <label>Department</label>
+                  <select
+                    value={patientData.department}
+                    onChange={(e) => handlePatientDataChange('department', e.target.value)}
+                  >
+                    <option value="">Select department</option>
+                    {DEPARTMENT_OPTIONS.map(department => (
+                      <option key={department} value={department}>
+                        {department}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <h3>Contact Information</h3>

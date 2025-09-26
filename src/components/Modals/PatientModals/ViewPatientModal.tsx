@@ -301,10 +301,18 @@ const ViewPatientModal: React.FC<ViewPatientModalProps> = ({
                       <span className="profile-label">Type:</span>
                       <span className="profile-value">{patient.patient_type}</span>
                     </div>
-                    <div className="profile-item">
-                      <span className="profile-label">Department/Course:</span>
-                      <span className="profile-value">{patient.course_department || 'Not provided'}</span>
-                    </div>
+                    {patient.course && (
+                      <div className="profile-item">
+                        <span className="profile-label">Course:</span>
+                        <span className="profile-value">{patient.course}</span>
+                      </div>
+                    )}
+                    {patient.department && (
+                      <div className="profile-item">
+                        <span className="profile-label">Department:</span>
+                        <span className="profile-value">{patient.department}</span>
+                      </div>
+                    )}
                     {patient.patient_type === 'Student' && (
                       <>
                         <div className="profile-item">

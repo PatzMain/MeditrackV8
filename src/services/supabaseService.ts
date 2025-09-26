@@ -28,7 +28,8 @@ export interface Patient {
   birthday?: string;
   address?: string;
   patient_type: 'Employee' | 'Dependent' | 'Student' | 'OPD';
-  course_department?: string;
+  course?: string;
+  department?: string;
   student_level?: string;
   year_level?: number;
   phone?: string;
