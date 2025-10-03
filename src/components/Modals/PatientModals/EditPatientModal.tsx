@@ -2,9 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   patientMonitoringService,
   activityService,
-  type Patient,
-  type PatientContact,
-  type MedicalHistory
+  type Patient
 } from '../../../services/supabaseService';
 import {
   COURSE_OPTIONS,
@@ -130,6 +128,7 @@ const EditPatientModal: React.FC<EditPatientModalProps> = ({
     if (patient && isOpen && !initialDataLoaded) {
       loadPatientData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patient, isOpen, initialDataLoaded]);
 
   const loadPatientData = async () => {

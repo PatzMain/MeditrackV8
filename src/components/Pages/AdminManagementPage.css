@@ -72,14 +72,68 @@
 .avatar-circle {
   width: 40px;
   height: 40px;
+  min-width: 40px;
+  min-height: 40px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  background: linear-gradient(135deg, #1e3c72, #2a5298);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-weight: 600;
-  font-size: 0.875rem;
+  font-weight: 700;
+  font-size: 1rem;
+  box-shadow: 0 4px 15px rgba(30, 60, 114, 0.3);
+  position: relative;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+  aspect-ratio: 1 / 1;
+}
+
+.avatar-circle:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(30, 60, 114, 0.4);
+}
+
+.avatar-circle .avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 50%;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  filter: brightness(1.05) contrast(1.1);
+  transition: all 0.3s ease;
+}
+
+.avatar-circle .avatar-image:hover {
+  filter: brightness(1.1) contrast(1.15);
+}
+
+.avatar-circle .avatar-initials {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.5px;
+}
+
+.avatar-circle .avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.avatar-circle .avatar-fallback svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2.5;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
 
 .user-info {
@@ -605,6 +659,76 @@
     font-size: 0.8rem;
     min-height: 36px;
   }
+
+  .search-filters input,
+  .search-filters select {
+    font-size: 16px; /* Prevents iOS zoom */
+  }
+}
+
+@media (max-width: 420px) {
+  .stat-card {
+    padding: 10px;
+  }
+
+  .stat-content .stat-value {
+    font-size: 1.375rem;
+  }
+
+  .pagination-page {
+    min-width: 32px;
+    min-height: 32px;
+  }
+}
+
+@media (max-width: 375px) {
+  .admin-section {
+    padding: 10px;
+  }
+
+  .user-card {
+    padding: 10px;
+  }
+
+  .stat-card {
+    padding: 8px;
+  }
+}
+
+@media (max-width: 360px) {
+  .stat-content .stat-value {
+    font-size: 1.25rem;
+  }
+
+  .pagination-page {
+    min-width: 28px;
+    min-height: 28px;
+    font-size: 0.75rem;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .admin-tab {
+    min-height: 44px;
+  }
+
+  .user-card .card-actions button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .pagination-page,
+  .pagination-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .search-filters input,
+  .search-filters select {
+    min-height: 44px;
+    font-size: 16px;
+  }
 }
 
 /* Admin Tabs */
@@ -825,13 +949,9 @@
   border-radius: 12px;
   padding: 1.5rem;
   text-align: center;
-  transition: all 0.3s ease;
 }
 
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-}
+/* Hover effects removed */
 
 .stat-card h3 {
   margin: 0 0 0.5rem 0;

@@ -10,7 +10,7 @@ interface UniversalSearchProps {
 }
 
 const UniversalSearch: React.FC<UniversalSearchProps> = ({
-  placeholder = "Search patients, inventory, users...",
+  placeholder = "Search patients, consultations, inventory...",
   onResultSelect
 }) => {
   const [query, setQuery] = useState('');
@@ -317,7 +317,7 @@ const UniversalSearch: React.FC<UniversalSearchProps> = ({
                   No results found for "{query}"
                 </div>
                 <div className="no-results-hint">
-                  Try searching for patients, medicines, or supplies
+                  Try searching for patients, consultations, medicines, or supplies
                 </div>
               </div>
             </div>
@@ -348,7 +348,7 @@ const UniversalSearch: React.FC<UniversalSearchProps> = ({
             <div className="search-section">
               <div className="search-tips">
                 <div className="search-tip">
-                  <strong>Quick tip:</strong> Try searching for patient names, medicine names, or use shortcuts like "add patient"
+                  <strong>Quick tip:</strong> Try searching for patient names, consultations, medicine names, or use shortcuts like "add patient"
                 </div>
               </div>
             </div>

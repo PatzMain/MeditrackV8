@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { userService, authService, activityService, inventoryService } from '../../services/supabaseService';
+import { userService, authService, activityService, inventoryService, patientMonitoringService } from '../../services/supabaseService';
 import AddUserModal from '../Modals/AddUserModal';
 import EditUserModal from '../Modals/EditUserModal';
 import './AdminManagementPage.css';
@@ -28,6 +28,7 @@ const AdminManagementPage: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(100);
+  const [userRecordCounts, setUserRecordCounts] = useState<{[key: number]: {patients: number, consultations: number}}>({});
 
   useEffect(() => {
     // Check if user is superadmin
@@ -52,6 +53,27 @@ const AdminManagementPage: React.FC = () => {
         activityService.getLogs()
       ]);
       setUsers(usersData);
+
+      // Get patient and consultation counts for each user to determine if they can be deleted
+      const recordCounts: {[key: number]: {patients: number, consultations: number}} = {};
+      await Promise.all(
+        usersData.map(async (user: any) => {
+          try {
+            const [patientsData, consultationsData] = await Promise.all([
+              patientMonitoringService.getPatients(),
+              patientMonitoringService.getConsultations(false)
+            ]);
+
+            recordCounts[user.id] = {
+              patients: patientsData.filter(p => p.created_by === user.id).length,
+              consultations: consultationsData.filter(c => c.created_by === user.id).length
+            };
+          } catch (error) {
+            recordCounts[user.id] = { patients: 0, consultations: 0 };
+          }
+        })
+      );
+      setUserRecordCounts(recordCounts);
 
       // Enhanced stats with real data
       const enhancedStats = {
@@ -88,16 +110,28 @@ const AdminManagementPage: React.FC = () => {
   const handleDeleteUser = async (userId: number, username: string) => {
     if (window.confirm(`Are you sure you want to delete user "${username}"?`)) {
       try {
+        console.log('Attempting to delete user:', userId, username);
+        setLoading(true);
+        setError(null);
+
         await userService.deleteUser(userId);
+
+        console.log('User deleted successfully, logging activity...');
         await activityService.logActivity({
           action: 'delete',
           description: `Deleted user: ${username}`,
           category: 'user_management'
         });
+
+        console.log('Activity logged, refreshing data...');
         await fetchData();
-      } catch (error) {
+        console.log('Data refreshed successfully');
+      } catch (error: any) {
         console.error('Error deleting user:', error);
-        setError('Failed to delete user');
+        console.error('Error details:', error.message, error.stack);
+        setError(`Failed to delete user: ${error.message || 'Unknown error'}`);
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -289,7 +323,30 @@ const AdminManagementPage: React.FC = () => {
                     <div className="card-header">
                       <div className="user-avatar">
                         <div className="avatar-circle">
-                          <span>{(user.first_name?.[0] || user.username[0] || '?').toUpperCase()}</span>
+                          {user.avatar_url ? (
+                            <img
+                              src={user.avatar_url}
+                              alt={`${user.first_name || user.username}'s avatar`}
+                              className="avatar-image"
+                              onError={(e) => {
+                                // Fallback to person SVG if image fails to load
+                                e.currentTarget.style.display = 'none';
+                                const fallbackSvg = e.currentTarget.nextElementSibling as HTMLElement;
+                                if (fallbackSvg) {
+                                  fallbackSvg.style.display = 'flex';
+                                }
+                              }}
+                            />
+                          ) : null}
+                          <div
+                            className="avatar-fallback"
+                            style={{ display: user.avatar_url ? 'none' : 'flex' }}
+                          >
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                              <circle cx="12" cy="7" r="4"/>
+                            </svg>
+                          </div>
                         </div>
                       </div>
                       <div className="user-info">
@@ -301,11 +358,21 @@ const AdminManagementPage: React.FC = () => {
                       <div className="card-actions">
                         <button
                           className="action-btn edit"
-                          title="Edit User"
+                          title={
+                            user.id === currentUser?.id
+                              ? "Cannot edit yourself"
+                              : user.role === 'superadmin' && currentUser?.role === 'superadmin'
+                                ? "Cannot edit other superadmins"
+                                : "Edit User"
+                          }
                           onClick={() => {
                             setSelectedUser(user);
                             setIsEditUserModalOpen(true);
                           }}
+                          disabled={
+                            user.id === currentUser?.id ||
+                            (user.role === 'superadmin' && currentUser?.role === 'superadmin')
+                          }
                         >
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -314,9 +381,21 @@ const AdminManagementPage: React.FC = () => {
                         </button>
                         <button
                           className="action-btn delete"
-                          title="Delete User"
+                          title={
+                            user.id === currentUser?.id
+                              ? "Cannot delete yourself"
+                              : user.role === 'superadmin'
+                                ? "Cannot delete superadmin users"
+                                : userRecordCounts[user.id] && (userRecordCounts[user.id].patients > 0 || userRecordCounts[user.id].consultations > 0)
+                                  ? `Cannot delete: User has created ${userRecordCounts[user.id].patients} patients and ${userRecordCounts[user.id].consultations} consultations`
+                                  : "Delete User"
+                          }
                           onClick={() => handleDeleteUser(user.id, user.username)}
-                          disabled={user.id === currentUser?.id}
+                          disabled={
+                            user.id === currentUser?.id ||
+                            user.role === 'superadmin' ||
+                            (userRecordCounts[user.id] && (userRecordCounts[user.id].patients > 0 || userRecordCounts[user.id].consultations > 0))
+                          }
                         >
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <polyline points="3,6 5,6 21,6" />
@@ -372,6 +451,19 @@ const AdminManagementPage: React.FC = () => {
                             </span>
                           </div>
                         </div>
+
+                        {userRecordCounts[user.id] && (userRecordCounts[user.id].patients > 0 || userRecordCounts[user.id].consultations > 0) && (
+                          <div className="meta-row">
+                            <div className="meta-item full-width">
+                              <span className="meta-label">Medical Records:</span>
+                              <span className="meta-value" style={{ color: '#dc2626', fontSize: '0.85rem' }}>
+                                {userRecordCounts[user.id].patients} patients, {userRecordCounts[user.id].consultations} consultations
+                                <br />
+                                <small style={{ color: '#6b7280' }}>Cannot delete due to data integrity</small>
+                              </span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

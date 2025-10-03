@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import './PatientMonitoringPage.css';
 import './PagesStyles.css';
 import {
@@ -10,6 +11,7 @@ import {
 } from '../../services/supabaseService';
 import AddPatientModal from '../Modals/PatientModals/AddPatientModal';
 import ViewPatientModal from '../Modals/PatientModals/ViewPatientModal';
+import EditPatientModal from '../Modals/PatientModals/EditPatientModal';
 import ArchivePatientModal from '../Modals/PatientModals/ArchivePatientModal';
 import StartConsultationModal from '../Modals/ConsultationModals/StartConsultationModal';
 import ConsultationModal from '../Modals/ConsultationModals/ConsultationModal';
@@ -19,6 +21,11 @@ import ConsultationAttachmentsModal from '../Modals/ConsultationModals/Consultat
 
 const PatientMonitoringPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [highlightedPatientId, setHighlightedPatientId] = useState<number | null>(null);
+  const [highlightedConsultationId, setHighlightedConsultationId] = useState<number | null>(null);
+
+  const location = useLocation();
+  const navigate = useNavigate();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [vitalSignsData, setVitalSignsData] = useState<(VitalSigns & { consultation: Consultation; patient?: Patient })[]>([]);
@@ -35,12 +42,14 @@ const PatientMonitoringPage: React.FC = () => {
   // Modal state management
   const [isAddPatientModalOpen, setIsAddPatientModalOpen] = useState(false);
   const [isViewPatientModalOpen, setIsViewPatientModalOpen] = useState(false);
+  const [isEditPatientModalOpen, setIsEditPatientModalOpen] = useState(false);
   const [isArchivePatientModalOpen, setIsArchivePatientModalOpen] = useState(false);
   const [isStartConsultationModalOpen, setIsStartConsultationModalOpen] = useState(false);
   const [isConsultationModalOpen, setIsConsultationModalOpen] = useState(false);
   const [isVitalSignsModalOpen, setIsVitalSignsModalOpen] = useState(false);
   const [isGlasgowComaScaleModalOpen, setIsGlasgowComaScaleModalOpen] = useState(false);
   const [isAttachmentsModalOpen, setIsAttachmentsModalOpen] = useState(false);
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [selectedConsultation, setSelectedConsultation] = useState<Consultation | null>(null);
 
@@ -104,6 +113,106 @@ const PatientMonitoringPage: React.FC = () => {
       setLoading(false);
     }
   }, []);
+
+  // Handle URL parameters for universal search navigation
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const patientId = searchParams.get('patientId');
+    const consultationId = searchParams.get('consultationId');
+
+    // Only process if we have URL parameters (coming from universal search)
+    if (patientId || consultationId) {
+      const processNavigation = async () => {
+        try {
+          setLoading(true);
+          setError(null);
+
+          // If we have a patientId, switch to patients tab and highlight
+          if (patientId) {
+            setActiveTab('patients');
+            await fetchPatients();
+            const parsedPatientId = parseInt(patientId);
+            setHighlightedPatientId(parsedPatientId);
+
+            // Wait for rendering then scroll to and highlight the patient card
+            setTimeout(() => {
+              const patientElement = document.getElementById(`patient-card-${parsedPatientId}`);
+              if (patientElement) {
+                patientElement.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'center',
+                  inline: 'nearest'
+                });
+              }
+            }, 100);
+          }
+
+          // If we have a consultationId, switch to consultations tab and highlight
+          if (consultationId) {
+            setActiveTab('consultations');
+            await fetchConsultations();
+            const parsedConsultationId = parseInt(consultationId);
+            setHighlightedConsultationId(parsedConsultationId);
+
+            // Wait for rendering then scroll to and highlight the consultation card
+            setTimeout(() => {
+              const consultationElement = document.getElementById(`consultation-card-${parsedConsultationId}`);
+              if (consultationElement) {
+                consultationElement.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'center',
+                  inline: 'nearest'
+                });
+              }
+            }, 100);
+          }
+
+          // Clean up URL after a delay to ensure highlighting completes
+          setTimeout(() => {
+            if (window.location.search) {
+              navigate('/patient-monitoring', { replace: true });
+            }
+          }, 1500);
+
+        } catch (error: any) {
+          console.error('Error in universal search navigation:', error);
+          setError(`Failed to load data: ${error.message}`);
+          // Still clean up URL even on error
+          setTimeout(() => {
+            if (window.location.search) {
+              navigate('/patient-monitoring', { replace: true });
+            }
+          }, 1000);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      processNavigation();
+    }
+  }, [location.search, navigate, fetchPatients, fetchConsultations]);
+
+  // Clear highlight after 5 seconds for patients
+  useEffect(() => {
+    if (highlightedPatientId && patients.length > 0 && !loading && !location.search) {
+      const timer = setTimeout(() => {
+        setHighlightedPatientId(null);
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [highlightedPatientId, patients, loading, location.search]);
+
+  // Clear highlight after 5 seconds for consultations
+  useEffect(() => {
+    if (highlightedConsultationId && consultations.length > 0 && !loading && !location.search) {
+      const timer = setTimeout(() => {
+        setHighlightedConsultationId(null);
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [highlightedConsultationId, consultations, loading, location.search]);
 
   useEffect(() => {
     fetchPatients();
@@ -180,8 +289,9 @@ const PatientMonitoringPage: React.FC = () => {
   };
 
   const handleEditPatient = (patient: Patient) => {
-    // This will be implemented when EditPatientModal is created
-    console.log('Edit patient:', patient);
+    setSelectedPatient(patient);
+    setIsViewPatientModalOpen(false);
+    setIsEditPatientModalOpen(true);
   };
 
   const handleNewConsultation = (patient: Patient) => {
@@ -201,6 +311,17 @@ const PatientMonitoringPage: React.FC = () => {
 
   const handleCloseViewPatientModal = () => {
     setIsViewPatientModalOpen(false);
+    setSelectedPatient(null);
+  };
+
+  const handleCloseEditPatientModal = () => {
+    setIsEditPatientModalOpen(false);
+    setSelectedPatient(null);
+  };
+
+  const handlePatientUpdated = (patient: Patient) => {
+    fetchPatients();
+    setIsEditPatientModalOpen(false);
     setSelectedPatient(null);
   };
 
@@ -236,12 +357,7 @@ const PatientMonitoringPage: React.FC = () => {
     setSelectedPatient(null);
   };
 
-  const handleContinueConsultation = (consultation: Consultation) => {
-    setSelectedConsultation(consultation);
-    setIsConsultationModalOpen(true);
-  };
-
-  const handleViewConsultationDetails = (consultation: Consultation) => {
+  const handleOpenConsultation = (consultation: Consultation) => {
     setSelectedConsultation(consultation);
     setIsConsultationModalOpen(true);
   };
@@ -279,11 +395,6 @@ const PatientMonitoringPage: React.FC = () => {
   };
 
   // Glasgow Coma Scale Modal Handlers
-  const handleOpenGlasgowComaScaleModal = (consultation: Consultation) => {
-    setSelectedConsultation(consultation);
-    setIsGlasgowComaScaleModalOpen(true);
-  };
-
   const handleGlasgowComaScaleRecorded = () => {
     fetchConsultations(); // Refresh consultations list to update glasgow_coma_recorded flag
     setIsGlasgowComaScaleModalOpen(false);
@@ -293,11 +404,6 @@ const PatientMonitoringPage: React.FC = () => {
   const handleCloseGlasgowComaScaleModal = () => {
     setIsGlasgowComaScaleModalOpen(false);
     setSelectedConsultation(null);
-  };
-
-  const handleOpenAttachmentsModal = (consultation: Consultation) => {
-    setSelectedConsultation(consultation);
-    setIsAttachmentsModalOpen(true);
   };
 
   const handleCloseAttachmentsModal = () => {
@@ -378,87 +484,123 @@ const PatientMonitoringPage: React.FC = () => {
     );
   };
 
-  const renderPatientCard = (patient: Patient) => (
-    <div key={patient.id} className="patient-card">
-      <div className="card-header">
-        <div className="patient-type">
-          <div className="type-icon">
-            {patient.patient_type === 'Student' ? (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-                <path d="M6 12v5c3 3 9 3 12 0v-5"/>
-              </svg>
-            ) : patient.patient_type === 'Employee' ? (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-                <line x1="8" y1="21" x2="16" y2="21"/>
-                <line x1="12" y1="17" x2="12" y2="21"/>
-              </svg>
-            ) : (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
-              </svg>
-            )}
+  const renderPatientCard = (patient: Patient) => {
+    return (
+      <div
+        key={patient.id}
+        id={`patient-card-${patient.id}`}
+        className={`patient-card ${highlightedPatientId === patient.id ? 'highlighted-item' : ''}`}
+      >
+        {/* Gradient Header with Avatar */}
+        <div className="patient-card-header">
+          <div className="patient-avatar">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
           </div>
-          <span>{patient.patient_type}</span>
+          <div className="patient-header-info">
+            <h3 className="patient-name">
+              {patient.first_name} {patient.middle_name ? `${patient.middle_name} ` : ''}{patient.last_name}
+            </h3>
+            <span className="patient-id-badge">ID: {patient.patient_id}</span>
+          </div>
+          <div className={`status-indicator ${patient.status}`}></div>
         </div>
-        <div className="patient-status">
-          <span className={`status-badge ${patient.status}`}>
-            {patient.status}
-          </span>
-        </div>
-      </div>
 
-      <div className="card-content">
-        <div className="patient-name">
-          {patient.first_name} {patient.middle_name ? `${patient.middle_name} ` : ''}{patient.last_name}
-        </div>
-        <div className="patient-id">ID: {patient.patient_id}</div>
-
-        <div className="patient-info">
-          <div className="info-row">
-            <div className="info-item">
+        {/* Patient Info Grid */}
+        <div className="patient-info-grid">
+          <div className="info-card">
+            <svg className="info-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="8" r="5"/>
+              <path d="M20 21a8 8 0 1 0-16 0"/>
+            </svg>
+            <div className="info-content">
               <span className="info-label">Age</span>
               <span className="info-value">{patient.age || 'N/A'}</span>
             </div>
-            <div className="info-item">
+          </div>
+
+          <div className="info-card">
+            <svg className="info-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 6v6l4 2"/>
+            </svg>
+            <div className="info-content">
               <span className="info-label">Sex</span>
               <span className="info-value">{patient.sex}</span>
             </div>
           </div>
 
-          <div className="info-row">
-            <div className="info-item">
+          <div className="info-card">
+            <svg className="info-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              {patient.patient_type === 'Student' ? (
+                <>
+                  <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                  <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+                </>
+              ) : patient.patient_type === 'Employee' ? (
+                <>
+                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                  <line x1="8" y1="21" x2="16" y2="21"/>
+                  <line x1="12" y1="17" x2="12" y2="21"/>
+                </>
+              ) : (
+                <>
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </>
+              )}
+            </svg>
+            <div className="info-content">
               <span className="info-label">Type</span>
               <span className="info-value">{patient.patient_type}</span>
             </div>
-            <div className="info-item">
+          </div>
+
+          <div className="info-card">
+            <svg className="info-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+            <div className="info-content">
               <span className="info-label">Status</span>
               <span className="info-value">{patient.civil_status}</span>
             </div>
           </div>
 
-          {(patient.course || patient.department) && (
-            <div className="info-row">
-              {patient.course && (
-                <div className="info-item">
-                  <span className="info-label">Course</span>
-                  <span className="info-value">{patient.course}</span>
-                </div>
-              )}
-              {patient.department && (
-                <div className="info-item">
-                  <span className="info-label">Department</span>
-                  <span className="info-value">{patient.department}</span>
-                </div>
-              )}
+          {patient.course && (
+            <div className="info-card">
+              <svg className="info-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+              </svg>
+              <div className="info-content">
+                <span className="info-label">Course</span>
+                <span className="info-value">{patient.course}</span>
+              </div>
+            </div>
+          )}
+
+          {patient.department && (
+            <div className="info-card">
+              <svg className="info-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
+              <div className="info-content">
+                <span className="info-label">Department</span>
+                <span className="info-value">{patient.department}</span>
+              </div>
             </div>
           )}
 
           {patient.phone && (
-            <div className="info-row">
-              <div className="info-item full-width">
+            <div className="info-card">
+              <svg className="info-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+              </svg>
+              <div className="info-content">
                 <span className="info-label">Phone</span>
                 <span className="info-value">{patient.phone}</span>
               </div>
@@ -466,21 +608,29 @@ const PatientMonitoringPage: React.FC = () => {
           )}
         </div>
 
-        <div className="card-actions">
+        {/* Modern Button Layout */}
+        <div className="patient-card-actions">
           <button
-            className="btn-primary"
+            className="btn-action btn-view"
             onClick={() => handleViewPatient(patient)}
           >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
             View Details
           </button>
           <button
-            className="btn-secondary"
+            className="btn-action btn-consult"
             onClick={() => handleNewConsultation(patient)}
           >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
             New Consultation
           </button>
           <button
-            className="btn-warning"
+            className="btn-action btn-archive"
             onClick={() => handleArchivePatient(patient)}
             title="Archive Patient"
           >
@@ -493,8 +643,8 @@ const PatientMonitoringPage: React.FC = () => {
           </button>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderPagination = () => (
     <div className="pagination">
@@ -578,14 +728,21 @@ const PatientMonitoringPage: React.FC = () => {
             </svg>
             Active Consultations
           </button>
+        </div>
+
+        {/* Tutorial Button */}
+        <div className="tutorial-section">
           <button
-            className={`tab-btn ${activeTab === 'vitals' ? 'active' : ''}`}
-            onClick={() => setActiveTab('vitals')}
+            className="btn-tutorial"
+            onClick={() => setIsTutorialOpen(true)}
+            title="Learn how to use Patient Monitoring System"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
             </svg>
-            Vital Signs
+            How to Use
           </button>
         </div>
       </div>
@@ -744,7 +901,11 @@ const PatientMonitoringPage: React.FC = () => {
         <div className="tab-content">
           <div className="consultations-grid">
             {consultations.filter(c => c.status === 'active').map(consultation => (
-              <div key={consultation.id} className="consultation-card">
+              <div
+                key={consultation.id}
+                id={`consultation-card-${consultation.id}`}
+                className={`consultation-card ${highlightedConsultationId === consultation.id ? 'highlighted-item' : ''}`}
+              >
                 <div className="card-header">
                   <div className="consultation-status">
                     <span className="status-badge active">Active</span>
@@ -769,45 +930,22 @@ const PatientMonitoringPage: React.FC = () => {
                   <div className="card-actions">
                     <button
                       className="btn-primary"
-                      onClick={() => handleContinueConsultation(consultation)}
-                    >
-                      Continue
-                    </button>
-                    <button
-                      className="btn-secondary"
-                      onClick={() => handleViewConsultationDetails(consultation)}
-                    >
-                      View Details
-                    </button>
-                    <button
-                      className="btn-info"
-                      onClick={() => handleOpenVitalSignsModal(consultation)}
-                      disabled={consultation.status !== 'active'}
+                      onClick={() => handleOpenConsultation(consultation)}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                        {consultation.status === 'active' ? (
+                          <>
+                            <path d="M5 12h14"/>
+                            <path d="M12 5l7 7-7 7"/>
+                          </>
+                        ) : (
+                          <>
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                          </>
+                        )}
                       </svg>
-                      Vital Signs
-                    </button>
-                    <button
-                      className="btn-warning"
-                      onClick={() => handleOpenGlasgowComaScaleModal(consultation)}
-                      disabled={consultation.status !== 'active'}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M9 12l2 2 4-4"/>
-                        <circle cx="12" cy="12" r="10"/>
-                      </svg>
-                      Glasgow
-                    </button>
-                    <button
-                      className="btn-info"
-                      onClick={() => handleOpenAttachmentsModal(consultation)}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.64 16.2a2 2 0 0 1-2.83-2.83l8.49-8.49"/>
-                      </svg>
-                      Files
+                      {consultation.status === 'active' ? 'Continue' : 'View Details'}
                     </button>
                   </div>
                 </div>
@@ -1012,7 +1150,7 @@ const PatientMonitoringPage: React.FC = () => {
                     <div className="vital-actions">
                       <button
                         className="btn-primary"
-                        onClick={() => handleViewConsultationDetails(vital.consultation)}
+                        onClick={() => handleOpenConsultation(vital.consultation)}
                       >
                         View Consultation
                       </button>
@@ -1071,6 +1209,77 @@ const PatientMonitoringPage: React.FC = () => {
         </div>
       )}
 
+      {/* Tutorial Modal */}
+      {isTutorialOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content tutorial-modal">
+            <div className="modal-header">
+              <h2 className="modal-title">Patient Monitoring Tutorial</h2>
+              <button className="modal-close-btn" onClick={() => setIsTutorialOpen(false)}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+
+            <div className="modal-body tutorial-content">
+              <div className="tutorial-section">
+                <h3>🏥 Getting Started</h3>
+                <ol>
+                  <li><strong>Add a Patient:</strong> Click "Add Patient" to register a new patient with basic information</li>
+                  <li><strong>Start Consultation:</strong> Once you have patients, click "Start Consultation" on any patient card</li>
+                  <li><strong>Record Vital Signs:</strong> During consultations, use "Record Vitals" to capture patient vitals</li>
+                </ol>
+              </div>
+
+              <div className="tutorial-section">
+                <h3>📋 Patient Management</h3>
+                <ul>
+                  <li><strong>View Patient Details:</strong> Click the patient's name to see full medical information</li>
+                  <li><strong>Archive Patients:</strong> Use the archive option to remove inactive patients</li>
+                  <li><strong>Search Patients:</strong> Use the search bar to quickly find specific patients</li>
+                </ul>
+              </div>
+
+              <div className="tutorial-section">
+                <h3>🩺 Consultation Workflow</h3>
+                <ol>
+                  <li><strong>Start:</strong> Begin a new consultation session</li>
+                  <li><strong>Record Vitals:</strong> Blood pressure, pain scale, and other measurements (all fields optional)</li>
+                  <li><strong>Document:</strong> Add notes, diagnosis, and treatment plans</li>
+                  <li><strong>Complete:</strong> Finish the consultation to save all data</li>
+                </ol>
+              </div>
+
+              <div className="tutorial-section">
+                <h3>🎯 Quick Tips</h3>
+                <div className="tips-grid">
+                  <div className="tip-item">
+                    <span className="tip-icon">💡</span>
+                    <span>All form fields are optional - enter only what you need</span>
+                  </div>
+                  <div className="tip-item">
+                    <span className="tip-icon">🔍</span>
+                    <span>Use the search functionality to quickly find patients or consultations</span>
+                  </div>
+                  <div className="tip-item">
+                    <span className="tip-icon">📊</span>
+                    <span>Pain scale is now beside blood pressure for easier entry</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn-primary" onClick={() => setIsTutorialOpen(false)}>
+                Got it! Let's Start
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modals */}
       <AddPatientModal
         isOpen={isAddPatientModalOpen}
@@ -1126,6 +1335,13 @@ const PatientMonitoringPage: React.FC = () => {
         isOpen={isAttachmentsModalOpen}
         consultation={selectedConsultation}
         onClose={handleCloseAttachmentsModal}
+      />
+
+      <EditPatientModal
+        isOpen={isEditPatientModalOpen}
+        patient={selectedPatient}
+        onClose={handleCloseEditPatientModal}
+        onSave={handlePatientUpdated}
       />
     </div>
   );

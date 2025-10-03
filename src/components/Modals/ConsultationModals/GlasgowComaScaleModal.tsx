@@ -11,6 +11,7 @@ import '../ConsultationModals.css';
 interface GlasgowComaScaleModalProps {
   isOpen: boolean;
   consultation: Consultation | null;
+  editingGlasgow?: GlasgowComaScale | null;
   onClose: () => void;
   onGlasgowComaScaleRecorded: (glasgowComaScale: GlasgowComaScale) => void;
 }
@@ -18,6 +19,7 @@ interface GlasgowComaScaleModalProps {
 const GlasgowComaScaleModal: React.FC<GlasgowComaScaleModalProps> = ({
   isOpen,
   consultation,
+  editingGlasgow,
   onClose,
   onGlasgowComaScaleRecorded
 }) => {
@@ -30,6 +32,25 @@ const GlasgowComaScaleModal: React.FC<GlasgowComaScaleModalProps> = ({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Load existing data when editing
+  React.useEffect(() => {
+    if (editingGlasgow) {
+      setGlasgowData({
+        eye_response: editingGlasgow.eye_response,
+        verbal_response: editingGlasgow.verbal_response,
+        motor_response: editingGlasgow.motor_response,
+        notes: ''
+      });
+    } else {
+      setGlasgowData({
+        eye_response: 4,
+        verbal_response: 5,
+        motor_response: 6,
+        notes: ''
+      });
+    }
+  }, [editingGlasgow]);
 
   // Glasgow Coma Scale scoring criteria
   const eyeResponseOptions = [
@@ -117,25 +138,47 @@ const GlasgowComaScaleModal: React.FC<GlasgowComaScaleModalProps> = ({
         assessed_by: authService.getCurrentUser()?.id
       };
 
-      const recordedGlasgowComaScale = await patientMonitoringService.createGlasgowComaScale(glasgowComaScale);
+      let recordedGlasgowComaScale: GlasgowComaScale;
 
-      // Glasgow Coma Scale recorded successfully
+      if (editingGlasgow) {
+        // Update existing assessment
+        recordedGlasgowComaScale = await patientMonitoringService.updateGlasgowComaScale(editingGlasgow.id, glasgowComaScale);
 
-      // Log activity
-      await activityService.logActivity({
-        action: 'record_glasgow_coma_scale',
-        description: `Recorded Glasgow Coma Scale assessment for case ${consultation.case_number}`,
-        details: {
-          consultation_id: consultation.id,
-          patient_id: consultation.patient_id,
-          glasgow_id: recordedGlasgowComaScale.id,
-          total_score: totalScore,
-          severity: getSeverityLevel(totalScore).level,
-          eye_response: glasgowData.eye_response,
-          verbal_response: glasgowData.verbal_response,
-          motor_response: glasgowData.motor_response
-        }
-      });
+        // Log activity
+        await activityService.logActivity({
+          action: 'update_glasgow_coma_scale',
+          description: `Updated Glasgow Coma Scale assessment for case ${consultation.case_number}`,
+          details: {
+            consultation_id: consultation.id,
+            patient_id: consultation.patient_id,
+            glasgow_id: editingGlasgow.id,
+            total_score: totalScore,
+            severity: getSeverityLevel(totalScore).level,
+            eye_response: glasgowData.eye_response,
+            verbal_response: glasgowData.verbal_response,
+            motor_response: glasgowData.motor_response
+          }
+        });
+      } else {
+        // Create new assessment
+        recordedGlasgowComaScale = await patientMonitoringService.createGlasgowComaScale(glasgowComaScale);
+
+        // Log activity
+        await activityService.logActivity({
+          action: 'record_glasgow_coma_scale',
+          description: `Recorded Glasgow Coma Scale assessment for case ${consultation.case_number}`,
+          details: {
+            consultation_id: consultation.id,
+            patient_id: consultation.patient_id,
+            glasgow_id: recordedGlasgowComaScale.id,
+            total_score: totalScore,
+            severity: getSeverityLevel(totalScore).level,
+            eye_response: glasgowData.eye_response,
+            verbal_response: glasgowData.verbal_response,
+            motor_response: glasgowData.motor_response
+          }
+        });
+      }
 
       onGlasgowComaScaleRecorded(recordedGlasgowComaScale);
       handleClose();
@@ -168,7 +211,7 @@ const GlasgowComaScaleModal: React.FC<GlasgowComaScaleModalProps> = ({
       <div className="modal-container large">
         <div className="modal-header">
           <div className="modal-title-section">
-            <h2 className="modal-title">Glasgow Coma Scale Assessment</h2>
+            <h2 className="modal-title">{editingGlasgow ? 'Edit Glasgow Coma Scale' : 'Glasgow Coma Scale Assessment'}</h2>
             <p className="modal-subtitle">
               Case: {consultation.case_number} | Patient: {consultation.patient?.first_name} {consultation.patient?.last_name}
             </p>
@@ -349,14 +392,14 @@ const GlasgowComaScaleModal: React.FC<GlasgowComaScaleModalProps> = ({
             disabled={loading}
           >
             {loading ? (
-              <span className="loading-spinner">Recording...</span>
+              <span className="loading-spinner">{editingGlasgow ? 'Updating...' : 'Recording...'}</span>
             ) : (
               <>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M9 12l2 2 4-4"/>
                   <circle cx="12" cy="12" r="10"/>
                 </svg>
-                Record Assessment
+                {editingGlasgow ? 'Update Assessment' : 'Record Assessment'}
               </>
             )}
           </button>

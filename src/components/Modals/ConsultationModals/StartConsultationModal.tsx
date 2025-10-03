@@ -26,7 +26,7 @@ const StartConsultationModal: React.FC<StartConsultationModalProps> = ({
     history_of_present_illness: '',
     pain_scale: 0,
     priority: 'normal' as 'low' | 'normal' | 'high' | 'urgent',
-    consultation_type: 'routine' as 'routine' | 'emergency' | 'follow_up' | 'referral',
+    consultation_type: 'routine' as 'routine' | 'emergency' | 'follow_up' | 'referral' | 'treatment',
     notes: ''
   });
 
@@ -177,6 +177,7 @@ const StartConsultationModal: React.FC<StartConsultationModalProps> = ({
                   <option value="emergency">Emergency</option>
                   <option value="follow_up">Follow-up</option>
                   <option value="referral">Referral</option>
+                  <option value="treatment">Treatment</option>
                 </select>
               </div>
               <div className="form-group">

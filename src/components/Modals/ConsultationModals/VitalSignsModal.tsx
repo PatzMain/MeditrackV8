@@ -12,6 +12,7 @@ import '../ConsultationModals.css';
 interface VitalSignsModalProps {
   isOpen: boolean;
   consultation: Consultation | null;
+  editingVitalSigns?: VitalSigns | null;
   onClose: () => void;
   onVitalSignsRecorded: (vitalSigns: VitalSigns) => void;
 }
@@ -19,12 +20,12 @@ interface VitalSignsModalProps {
 const VitalSignsModal: React.FC<VitalSignsModalProps> = ({
   isOpen,
   consultation,
+  editingVitalSigns,
   onClose,
   onVitalSignsRecorded
 }) => {
   const [vitalSignsData, setVitalSignsData] = useState({
-    systolic_bp: '',
-    diastolic_bp: '',
+    blood_pressure: '',
     heart_rate: '',
     temperature: '',
     respiratory_rate: '',
@@ -39,6 +40,39 @@ const VitalSignsModal: React.FC<VitalSignsModalProps> = ({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Load existing data when editing
+  React.useEffect(() => {
+    if (editingVitalSigns) {
+      const bloodPressure = editingVitalSigns.blood_pressure_systolic && editingVitalSigns.blood_pressure_diastolic
+        ? `${editingVitalSigns.blood_pressure_systolic}/${editingVitalSigns.blood_pressure_diastolic}`
+        : '';
+
+      const height = editingVitalSigns.height?.toString() || '';
+      const weight = editingVitalSigns.weight?.toString() || '';
+      let bmi = '';
+
+      if (height && weight) {
+        const heightInMeters = parseFloat(height) / 100;
+        const weightNum = parseFloat(weight);
+        bmi = (weightNum / (heightInMeters * heightInMeters)).toFixed(1);
+      }
+
+      setVitalSignsData({
+        blood_pressure: bloodPressure,
+        heart_rate: editingVitalSigns.pulse_rate?.toString() || '',
+        temperature: editingVitalSigns.temperature?.toString() || '',
+        respiratory_rate: editingVitalSigns.respiratory_rate?.toString() || '',
+        oxygen_saturation: editingVitalSigns.oxygen_saturation?.toString() || '',
+        height: height,
+        weight: weight,
+        bmi: bmi,
+        blood_glucose: '',
+        pain_level: editingVitalSigns.pain_scale || 0,
+        notes: ''
+      });
+    }
+  }, [editingVitalSigns]);
 
   const handleInputChange = (field: string, value: any) => {
     setVitalSignsData(prev => {
@@ -65,59 +99,73 @@ const VitalSignsModal: React.FC<VitalSignsModalProps> = ({
     });
   };
 
+  const handleBloodPressureChange = (value: string) => {
+    setVitalSignsData(prev => ({ ...prev, blood_pressure: value }));
+  };
+
+  const parseBloodPressure = (value: string): { systolic: number | null, diastolic: number | null } => {
+    const parts = value.split('/').map(p => p.trim());
+    if (parts.length !== 2) return { systolic: null, diastolic: null };
+
+    const systolic = parseInt(parts[0]);
+    const diastolic = parseInt(parts[1]);
+
+    if (isNaN(systolic) || isNaN(diastolic)) {
+      return { systolic: null, diastolic: null };
+    }
+
+    return { systolic, diastolic };
+  };
+
   const validateVitalSigns = (): boolean => {
-    // Check for required vital signs
-    if (!vitalSignsData.systolic_bp.trim()) {
-      setError('Systolic blood pressure is required');
-      return false;
-    }
-    if (!vitalSignsData.diastolic_bp.trim()) {
-      setError('Diastolic blood pressure is required');
-      return false;
-    }
-    if (!vitalSignsData.heart_rate.trim()) {
-      setError('Heart rate is required');
-      return false;
-    }
-    if (!vitalSignsData.temperature.trim()) {
-      setError('Temperature is required');
-      return false;
-    }
-    if (!vitalSignsData.respiratory_rate.trim()) {
-      setError('Respiratory rate is required');
-      return false;
+    // Only validate ranges if values are provided (no fields are required)
+
+    if (vitalSignsData.blood_pressure) {
+      const { systolic, diastolic } = parseBloodPressure(vitalSignsData.blood_pressure);
+
+      if (systolic === null || diastolic === null) {
+        setError('Invalid blood pressure format. Use format: 120/80');
+        return false;
+      }
+
+      if (systolic < 50 || systolic > 300) {
+        setError('Systolic BP must be between 50-300 mmHg');
+        return false;
+      }
+
+      if (diastolic < 30 || diastolic > 200) {
+        setError('Diastolic BP must be between 30-200 mmHg');
+        return false;
+      }
+
+      if (systolic <= diastolic) {
+        setError('Systolic BP must be greater than diastolic BP');
+        return false;
+      }
     }
 
-    // Validate ranges
-    const systolic = parseInt(vitalSignsData.systolic_bp);
-    const diastolic = parseInt(vitalSignsData.diastolic_bp);
-    const heartRate = parseInt(vitalSignsData.heart_rate);
-    const temperature = parseFloat(vitalSignsData.temperature);
-    const respiratoryRate = parseInt(vitalSignsData.respiratory_rate);
+    if (vitalSignsData.heart_rate) {
+      const heartRate = parseInt(vitalSignsData.heart_rate);
+      if (heartRate < 30 || heartRate > 250) {
+        setError('Heart rate must be between 30-250 bpm');
+        return false;
+      }
+    }
 
-    if (systolic < 50 || systolic > 300) {
-      setError('Systolic BP must be between 50-300 mmHg');
-      return false;
+    if (vitalSignsData.temperature) {
+      const temperature = parseFloat(vitalSignsData.temperature);
+      if (temperature < 30 || temperature > 45) {
+        setError('Temperature must be between 30-45°C');
+        return false;
+      }
     }
-    if (diastolic < 30 || diastolic > 200) {
-      setError('Diastolic BP must be between 30-200 mmHg');
-      return false;
-    }
-    if (systolic <= diastolic) {
-      setError('Systolic BP must be greater than diastolic BP');
-      return false;
-    }
-    if (heartRate < 30 || heartRate > 250) {
-      setError('Heart rate must be between 30-250 bpm');
-      return false;
-    }
-    if (temperature < 30 || temperature > 45) {
-      setError('Temperature must be between 30-45°C');
-      return false;
-    }
-    if (respiratoryRate < 5 || respiratoryRate > 60) {
-      setError('Respiratory rate must be between 5-60 per minute');
-      return false;
+
+    if (vitalSignsData.respiratory_rate) {
+      const respiratoryRate = parseInt(vitalSignsData.respiratory_rate);
+      if (respiratoryRate < 5 || respiratoryRate > 60) {
+        setError('Respiratory rate must be between 5-60 per minute');
+        return false;
+      }
     }
 
     // Validate optional fields if provided
@@ -141,9 +189,9 @@ const VitalSignsModal: React.FC<VitalSignsModalProps> = ({
 
   const getBPCategory = (systolic: number, diastolic: number): string => {
     if (systolic < 120 && diastolic < 80) return 'Normal';
-    if (systolic < 130 && diastolic < 80) return 'Elevated';
-    if (systolic < 140 || diastolic < 90) return 'Stage 1 Hypertension';
-    if (systolic < 180 || diastolic < 120) return 'Stage 2 Hypertension';
+    if (systolic >= 120 && systolic < 130 && diastolic < 80) return 'Elevated';
+    if ((systolic >= 130 && systolic < 140) || (diastolic >= 80 && diastolic < 90)) return 'Stage 1 Hypertension';
+    if ((systolic >= 140 && systolic < 180) || (diastolic >= 90 && diastolic < 120)) return 'Stage 2 Hypertension';
     return 'Hypertensive Crisis';
   };
 
@@ -168,10 +216,12 @@ const VitalSignsModal: React.FC<VitalSignsModalProps> = ({
       setLoading(true);
       setError(null);
 
+      const { systolic, diastolic } = parseBloodPressure(vitalSignsData.blood_pressure);
+
       const vitalSigns: Omit<VitalSigns, 'id' | 'recorded_at'> = {
         consultation_id: consultation.id,
-        blood_pressure_systolic: parseInt(vitalSignsData.systolic_bp),
-        blood_pressure_diastolic: parseInt(vitalSignsData.diastolic_bp),
+        blood_pressure_systolic: systolic!,
+        blood_pressure_diastolic: diastolic!,
         pulse_rate: parseInt(vitalSignsData.heart_rate),
         temperature: parseFloat(vitalSignsData.temperature),
         respiratory_rate: parseInt(vitalSignsData.respiratory_rate),
@@ -182,23 +232,43 @@ const VitalSignsModal: React.FC<VitalSignsModalProps> = ({
         recorded_by: authService.getCurrentUser()?.id
       };
 
-      const recordedVitalSigns = await patientMonitoringService.createVitalSigns(vitalSigns);
+      let recordedVitalSigns: VitalSigns;
 
-      // Vital signs recorded successfully
+      if (editingVitalSigns) {
+        // Update existing vital signs
+        recordedVitalSigns = await patientMonitoringService.updateVitalSigns(editingVitalSigns.id, vitalSigns);
 
-      // Log activity
-      await activityService.logActivity({
-        action: 'record_vital_signs',
-        description: `Recorded vital signs for case ${consultation.case_number}`,
-        details: {
-          consultation_id: consultation.id,
-          patient_id: consultation.patient_id,
-          vital_signs_id: recordedVitalSigns.id,
-          bp: `${vitalSignsData.systolic_bp}/${vitalSignsData.diastolic_bp}`,
-          heart_rate: vitalSignsData.heart_rate,
-          temperature: vitalSignsData.temperature
-        }
-      });
+        // Log activity
+        await activityService.logActivity({
+          action: 'update_vital_signs',
+          description: `Updated vital signs for case ${consultation.case_number}`,
+          details: {
+            consultation_id: consultation.id,
+            patient_id: consultation.patient_id,
+            vital_signs_id: editingVitalSigns.id,
+            bp: vitalSignsData.blood_pressure,
+            heart_rate: vitalSignsData.heart_rate,
+            temperature: vitalSignsData.temperature
+          }
+        });
+      } else {
+        // Create new vital signs
+        recordedVitalSigns = await patientMonitoringService.createVitalSigns(vitalSigns);
+
+        // Log activity
+        await activityService.logActivity({
+          action: 'record_vital_signs',
+          description: `Recorded vital signs for case ${consultation.case_number}`,
+          details: {
+            consultation_id: consultation.id,
+            patient_id: consultation.patient_id,
+            vital_signs_id: recordedVitalSigns.id,
+            bp: vitalSignsData.blood_pressure,
+            heart_rate: vitalSignsData.heart_rate,
+            temperature: vitalSignsData.temperature
+          }
+        });
+      }
 
       onVitalSignsRecorded(recordedVitalSigns);
       handleClose();
@@ -212,8 +282,7 @@ const VitalSignsModal: React.FC<VitalSignsModalProps> = ({
 
   const handleClose = () => {
     setVitalSignsData({
-      systolic_bp: '',
-      diastolic_bp: '',
+      blood_pressure: '',
       heart_rate: '',
       temperature: '',
       respiratory_rate: '',
@@ -231,8 +300,7 @@ const VitalSignsModal: React.FC<VitalSignsModalProps> = ({
 
   if (!isOpen || !consultation) return null;
 
-  const systolic = parseInt(vitalSignsData.systolic_bp);
-  const diastolic = parseInt(vitalSignsData.diastolic_bp);
+  const { systolic, diastolic } = parseBloodPressure(vitalSignsData.blood_pressure);
   const bmi = parseFloat(vitalSignsData.bmi);
 
   return (
@@ -240,7 +308,7 @@ const VitalSignsModal: React.FC<VitalSignsModalProps> = ({
       <div className="modal-container large">
         <div className="modal-header">
           <div className="modal-title-section">
-            <h2 className="modal-title">Record Vital Signs</h2>
+            <h2 className="modal-title">{editingVitalSigns ? 'Edit Vital Signs' : 'Record Vital Signs'}</h2>
             <p className="modal-subtitle">
               Case: {consultation.case_number} | Patient: {consultation.patient?.first_name} {consultation.patient?.last_name}
             </p>
@@ -269,30 +337,21 @@ const VitalSignsModal: React.FC<VitalSignsModalProps> = ({
             {/* Primary Vital Signs */}
             <div className="form-section">
               <h4>Primary Vital Signs</h4>
+
+              {/* Blood Pressure and Pain Scale Row */}
               <div className="form-row">
                 <div className="form-group">
-                  <label>Systolic BP (mmHg) <span className="required">*</span></label>
+                  <label>Blood Pressure (mmHg)</label>
                   <input
-                    type="number"
-                    placeholder="120"
-                    value={vitalSignsData.systolic_bp}
-                    onChange={(e) => handleInputChange('systolic_bp', e.target.value)}
-                    min="50"
-                    max="300"
+                    type="text"
+                    placeholder="120/80"
+                    value={vitalSignsData.blood_pressure}
+                    onChange={(e) => handleBloodPressureChange(e.target.value)}
+                    pattern="\d{2,3}/\d{2,3}"
                   />
+                  <span className="input-hint">Format: 120/80</span>
                 </div>
-                <div className="form-group">
-                  <label>Diastolic BP (mmHg) <span className="required">*</span></label>
-                  <input
-                    type="number"
-                    placeholder="80"
-                    value={vitalSignsData.diastolic_bp}
-                    onChange={(e) => handleInputChange('diastolic_bp', e.target.value)}
-                    min="30"
-                    max="200"
-                  />
-                </div>
-                {systolic > 0 && diastolic > 0 && (
+                {systolic !== null && diastolic !== null && systolic > 0 && diastolic > 0 && (
                   <div className="form-group">
                     <label>BP Category</label>
                     <div className={`bp-category ${getBPCategory(systolic, diastolic).toLowerCase().replace(/\s+/g, '-')}`}>
@@ -300,11 +359,53 @@ const VitalSignsModal: React.FC<VitalSignsModalProps> = ({
                     </div>
                   </div>
                 )}
+                <div className="form-group pain-scale-group">
+                  <label>Pain Assessment Scale</label>
+                  <div className="pain-scale-visual">
+                    <div className="pain-scale-header">
+                      <span className="pain-scale-label">No Pain</span>
+                      <span className="pain-scale-value-display">
+                        <span className={`pain-level-badge pain-${vitalSignsData.pain_level <= 3 ? 'low' : vitalSignsData.pain_level <= 6 ? 'moderate' : vitalSignsData.pain_level <= 8 ? 'severe' : 'critical'}`}>
+                          {vitalSignsData.pain_level}/10
+                        </span>
+                        <span className="pain-level-description">
+                          {vitalSignsData.pain_level === 0 ? 'No Pain' :
+                           vitalSignsData.pain_level <= 3 ? 'Mild Pain' :
+                           vitalSignsData.pain_level <= 6 ? 'Moderate Pain' :
+                           vitalSignsData.pain_level <= 8 ? 'Severe Pain' : 'Very Severe'}
+                        </span>
+                      </span>
+                      <span className="pain-scale-label">Worst Pain</span>
+                    </div>
+                    <div className="pain-scale-track">
+                      <input
+                        type="range"
+                        min="0"
+                        max="10"
+                        value={vitalSignsData.pain_level}
+                        onChange={(e) => handleInputChange('pain_level', parseInt(e.target.value))}
+                        className="pain-scale-input"
+                      />
+                      <div className="pain-scale-markers">
+                        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                          <div
+                            key={num}
+                            className={`pain-marker ${vitalSignsData.pain_level === num ? 'active' : ''}`}
+                            onClick={() => handleInputChange('pain_level', num)}
+                          >
+                            {num}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
+              {/* Other Vital Signs Row */}
               <div className="form-row">
                 <div className="form-group">
-                  <label>Heart Rate (bpm) <span className="required">*</span></label>
+                  <label>Heart Rate (bpm)</label>
                   <input
                     type="number"
                     placeholder="72"
@@ -315,7 +416,7 @@ const VitalSignsModal: React.FC<VitalSignsModalProps> = ({
                   />
                 </div>
                 <div className="form-group">
-                  <label>Temperature (°C) <span className="required">*</span></label>
+                  <label>Temperature (°C)</label>
                   <input
                     type="number"
                     step="0.1"
@@ -327,7 +428,7 @@ const VitalSignsModal: React.FC<VitalSignsModalProps> = ({
                   />
                 </div>
                 <div className="form-group">
-                  <label>Respiratory Rate (/min) <span className="required">*</span></label>
+                  <label>Respiratory Rate (/min)</label>
                   <input
                     type="number"
                     placeholder="16"
@@ -337,13 +438,6 @@ const VitalSignsModal: React.FC<VitalSignsModalProps> = ({
                     max="60"
                   />
                 </div>
-              </div>
-            </div>
-
-            {/* Additional Measurements */}
-            <div className="form-section">
-              <h4>Additional Measurements</h4>
-              <div className="form-row">
                 <div className="form-group">
                   <label>Oxygen Saturation (%)</label>
                   <input
@@ -355,6 +449,13 @@ const VitalSignsModal: React.FC<VitalSignsModalProps> = ({
                     max="100"
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* Additional Measurements */}
+            <div className="form-section">
+              <h4>Additional Measurements</h4>
+              <div className="form-row">
                 <div className="form-group">
                   <label>Blood Glucose (mg/dL)</label>
                   <input
@@ -412,28 +513,6 @@ const VitalSignsModal: React.FC<VitalSignsModalProps> = ({
               </div>
             </div>
 
-            {/* Pain Assessment */}
-            <div className="form-section">
-              <h4>Pain Assessment</h4>
-              <div className="form-group">
-                <label>Pain Level (0-10)</label>
-                <div className="pain-scale-container">
-                  <input
-                    type="range"
-                    min="0"
-                    max="10"
-                    value={vitalSignsData.pain_level}
-                    onChange={(e) => handleInputChange('pain_level', parseInt(e.target.value))}
-                    className="pain-scale-slider"
-                  />
-                  <div className="pain-scale-labels">
-                    <span>0 - No Pain</span>
-                    <span className="pain-scale-value">{vitalSignsData.pain_level}</span>
-                    <span>10 - Severe Pain</span>
-                  </div>
-                </div>
-              </div>
-            </div>
 
             {/* Notes */}
             <div className="form-section">
@@ -461,13 +540,13 @@ const VitalSignsModal: React.FC<VitalSignsModalProps> = ({
             disabled={loading}
           >
             {loading ? (
-              <span className="loading-spinner">Recording...</span>
+              <span className="loading-spinner">{editingVitalSigns ? 'Updating...' : 'Recording...'}</span>
             ) : (
               <>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
                 </svg>
-                Record Vital Signs
+                {editingVitalSigns ? 'Update Vital Signs' : 'Record Vital Signs'}
               </>
             )}
           </button>

@@ -294,13 +294,13 @@ const ArchivesPage: React.FC = () => {
               });
             }
           } else if (type === 'patient') {
-            // Skip patient deletion for data integrity
-            console.warn(`Skipping permanent deletion of patient record: ${item?.title} (data integrity)`);
+            // Delete patient and all related records
+            await patientMonitoringService.deletePatient(id);
 
             if (item) {
               await activityService.logActivity({
-                action: 'delete_attempt',
-                description: `Attempted bulk deletion of patient record: ${item.title} (action blocked for data integrity)`,
+                action: 'delete',
+                description: `Permanently deleted patient record: ${item.title} (including all related medical records)`,
                 category: 'patient_management'
               });
             }
@@ -396,20 +396,15 @@ const ArchivesPage: React.FC = () => {
           category: 'inventory'
         });
       } else if (type === 'patient') {
-        // For patients, we might want to consider if we should really permanently delete
-        // or just keep them archived. For now, let's just log that this action was attempted
-        // but not actually delete the patient record for data integrity
-        console.warn('Permanent deletion of patient records is not recommended for data integrity');
+        // Delete patient and all related records
+        await patientMonitoringService.deletePatient(id);
 
-        // Instead of deleting, we could add a "permanently_deleted" status or similar
-        // For now, just log the attempt
+        // Log the activity
         await activityService.logActivity({
-          action: 'delete_attempt',
-          description: `Attempted permanent deletion of patient record: ${selectedItem.title} (action blocked for data integrity)`,
+          action: 'delete',
+          description: `Permanently deleted patient record: ${selectedItem.title} (including all related medical records)`,
           category: 'patient_management'
         });
-
-        throw new Error('Permanent deletion of patient records is not allowed for data integrity purposes');
       }
 
       // Refresh the archives list
@@ -522,7 +517,7 @@ const ArchivesPage: React.FC = () => {
       {/* Archive Statistics */}
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-icon">
+          <div className="stat-icon-wrapper">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <rect width="20" height="5" x="2" y="3" rx="1" stroke="currentColor" strokeWidth="2"/>
               <path d="m4 8 16 0" stroke="currentColor" strokeWidth="2"/>
@@ -537,7 +532,7 @@ const ArchivesPage: React.FC = () => {
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon">
+          <div className="stat-icon-wrapper">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
               <rect x="7" y="7" width="3" height="9" stroke="currentColor" strokeWidth="2"/>
@@ -552,7 +547,7 @@ const ArchivesPage: React.FC = () => {
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon">
+          <div className="stat-icon-wrapper">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2"/>
               <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
@@ -566,24 +561,7 @@ const ArchivesPage: React.FC = () => {
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M3 3v18h18" stroke="currentColor" strokeWidth="2"/>
-              <path d="m7 14 4-4 4 4 5-5" stroke="currentColor" strokeWidth="2"/>
-              <circle cx="11" cy="10" r="1" fill="currentColor"/>
-              <circle cx="15" cy="14" r="1" fill="currentColor"/>
-              <circle cx="20" cy="9" r="1" fill="currentColor"/>
-            </svg>
-          </div>
-          <div className="stat-content">
-            <div className="stat-value">{new Set(filteredArchives.map(item => item.category)).size}</div>
-            <div className="stat-title">Categories</div>
-            <div className="stat-change positive">Organized types</div>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon">
+          <div className="stat-icon-wrapper">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <path d="M3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12Z" stroke="currentColor" strokeWidth="2"/>
               <path d="M12 7V12L15 15" stroke="currentColor" strokeWidth="2"/>

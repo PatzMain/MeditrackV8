@@ -126,6 +126,13 @@ export interface EnhancedActivityTrendData {
   [key: string]: any;
 }
 
+export interface PatientDistributionData {
+  course: string;
+  yearLevel: number | null;
+  count: number;
+  [key: string]: any;
+}
+
 class DashboardService {
   async getDashboardStats(): Promise<DashboardStats> {
     try {
@@ -783,6 +790,42 @@ class DashboardService {
       return trends;
     } catch (error) {
       console.error('Error fetching enhanced activity trends:', error);
+      return [];
+    }
+  }
+
+  async getPatientDistribution(): Promise<PatientDistributionData[]> {
+    try {
+      const patients = await patientMonitoringService.getPatients();
+
+      // Group by course and year level
+      const distribution = new Map<string, Map<number | null, number>>();
+
+      patients.forEach((patient: any) => {
+        if (patient.patient_type === 'Student' && patient.course) {
+          const course = patient.course;
+          const yearLevel = patient.year_level || null;
+
+          if (!distribution.has(course)) {
+            distribution.set(course, new Map());
+          }
+
+          const courseMap = distribution.get(course)!;
+          courseMap.set(yearLevel, (courseMap.get(yearLevel) || 0) + 1);
+        }
+      });
+
+      // Convert to array
+      const result: PatientDistributionData[] = [];
+      distribution.forEach((yearMap, course) => {
+        yearMap.forEach((count, yearLevel) => {
+          result.push({ course, yearLevel, count });
+        });
+      });
+
+      return result.sort((a, b) => a.course.localeCompare(b.course));
+    } catch (error) {
+      console.error('Error getting patient distribution:', error);
       return [];
     }
   }

@@ -13,6 +13,7 @@ import {
   STUDENT_LEVEL_OPTIONS,
   YEAR_LEVEL_OPTIONS
 } from '../../../constants/patientOptions';
+import { useModalScrollLock } from '../../../hooks/useModalScrollLock';
 import './PatientModals.css';
 
 interface AddPatientModalProps {
@@ -80,6 +81,9 @@ const AddPatientModal: React.FC<AddPatientModalProps> = ({ isOpen, onClose, onSa
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const modalBodyRef = useRef<HTMLDivElement>(null);
+
+  // Handle modal scroll lock and centering on mobile
+  useModalScrollLock(isOpen);
 
   const [patientData, setPatientData] = useState<PatientFormData>({
     first_name: '',

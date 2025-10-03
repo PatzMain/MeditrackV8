@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   patientMonitoringService,
   activityService,
-  authService,
   type ConsultationAttachment,
   type Consultation
 } from '../../../services/supabaseService';
@@ -22,105 +21,116 @@ const ConsultationAttachmentsModal: React.FC<ConsultationAttachmentsModalProps> 
   onClose,
   onAttachmentAdded
 }) => {
-  const [attachments, setAttachments] = useState<ConsultationAttachment[]>([]);
-  const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [description, setDescription] = useState('');
-
-  const fetchAttachments = useCallback(async () => {
-    if (!consultation) return;
-
-    try {
-      setLoading(true);
-      const attachmentsData = await patientMonitoringService.getConsultationAttachments(consultation.id);
-      setAttachments(attachmentsData);
-    } catch (error) {
-      console.error('Error fetching attachments:', error);
-      setError('Failed to load attachments');
-    } finally {
-      setLoading(false);
-    }
-  }, [consultation]);
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (consultation && isOpen) {
-      fetchAttachments();
-    }
-  }, [consultation, isOpen, fetchAttachments]);
-
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Validate file size (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        setError('File size must be less than 10MB');
-        return;
-      }
-
-      // Validate file type
-      const allowedTypes = [
-        'image/jpeg',
-        'image/png',
-        'image/gif',
-        'application/pdf',
-        'text/plain',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-      ];
-
-      if (!allowedTypes.includes(file.type)) {
-        setError('File type not supported. Please upload images, PDFs, or documents only.');
-        return;
-      }
-
-      setSelectedFile(file);
+    if (isOpen && consultation) {
       setError(null);
+      setSelectedFile(null);
+      setDescription('');
+      setUploadProgress(0);
     }
+  }, [isOpen, consultation]);
+
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
+  }, []);
+
+  const validateFile = (file: File): string | null => {
+    // Validate file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      return 'File size must be less than 10MB';
+    }
+
+    // Validate file type
+    const allowedTypes = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'application/pdf',
+      'text/plain',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      return 'File type not supported. Please upload images, PDFs, or documents only.';
+    }
+
+    return null;
   };
 
-  const simulateFileUpload = async (file: File): Promise<string> => {
-    // Simulate file upload process
-    // In a real implementation, this would upload to a storage service
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const fileName = `consultation_${consultation?.id}_${Date.now()}_${file.name}`;
-        const filePath = `/uploads/consultations/${fileName}`;
-        resolve(filePath);
-      }, 1500);
-    });
-  };
+  const handleFileSelect = useCallback((files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    const validationError = validateFile(file);
+
+    if (validationError) {
+      setError(validationError);
+      setSelectedFile(null);
+      return;
+    }
+
+    setSelectedFile(file);
+    setError(null);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFileSelect(e.dataTransfer.files);
+    }
+  }, [handleFileSelect]);
 
   const handleUpload = async () => {
     if (!consultation || !selectedFile) return;
 
     try {
       setUploading(true);
+      setUploadProgress(0);
       setError(null);
 
-      // Simulate file upload (replace with actual upload logic)
-      const filePath = await simulateFileUpload(selectedFile);
+      // Simulate upload progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 100);
 
-      const attachmentData = {
-        consultation_id: consultation.id,
-        file_name: selectedFile.name,
-        file_path: filePath,
-        file_type: selectedFile.type,
-        file_size: selectedFile.size,
-        description: description.trim() || undefined,
-        uploaded_by: authService.getCurrentUser()?.id
-      };
+      // Upload file using Supabase storage
+      const newAttachment = await patientMonitoringService.uploadConsultationAttachment(
+        consultation.id,
+        selectedFile,
+        description.trim() || undefined
+      );
 
-      const newAttachment = await patientMonitoringService.createConsultationAttachment(attachmentData);
-
-      setAttachments(prev => [newAttachment, ...prev]);
-      setSelectedFile(null);
-      setDescription('');
-
-      // Clear file input
-      const fileInput = document.getElementById('file-upload') as HTMLInputElement;
-      if (fileInput) fileInput.value = '';
+      clearInterval(progressInterval);
+      setUploadProgress(100);
 
       // Log activity
       await activityService.logActivity({
@@ -135,38 +145,27 @@ const ConsultationAttachmentsModal: React.FC<ConsultationAttachmentsModalProps> 
         }
       });
 
+      // Reset form
+      setSelectedFile(null);
+      setDescription('');
+      setUploadProgress(0);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+
+      // Notify parent
       onAttachmentAdded?.(newAttachment);
+
+      // Close modal after successful upload
+      setTimeout(() => {
+        onClose();
+      }, 500);
     } catch (error: any) {
       console.error('Error uploading file:', error);
       setError(`Failed to upload file: ${error.message}`);
+      setUploadProgress(0);
     } finally {
       setUploading(false);
-    }
-  };
-
-  const handleDelete = async (attachment: ConsultationAttachment) => {
-    if (!window.confirm('Are you sure you want to delete this attachment?')) {
-      return;
-    }
-
-    try {
-      await patientMonitoringService.deleteConsultationAttachment(attachment.id);
-      setAttachments(prev => prev.filter(a => a.id !== attachment.id));
-
-      // Log activity
-      await activityService.logActivity({
-        action: 'delete_consultation_attachment',
-        description: `Deleted file "${attachment.file_name}" from consultation ${consultation?.case_number}`,
-        details: {
-          consultation_id: consultation?.id,
-          patient_id: consultation?.patient_id,
-          file_name: attachment.file_name,
-          attachment_id: attachment.id
-        }
-      });
-    } catch (error: any) {
-      console.error('Error deleting attachment:', error);
-      setError(`Failed to delete attachment: ${error.message}`);
     }
   };
 
@@ -178,21 +177,10 @@ const ConsultationAttachmentsModal: React.FC<ConsultationAttachmentsModalProps> 
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
   const getFileIcon = (fileType: string) => {
     if (fileType.startsWith('image/')) {
       return (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
           <circle cx="8.5" cy="8.5" r="1.5"/>
           <path d="M21 15l-5-5L5 21"/>
@@ -201,7 +189,7 @@ const ConsultationAttachmentsModal: React.FC<ConsultationAttachmentsModalProps> 
     }
     if (fileType === 'application/pdf') {
       return (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
           <polyline points="14,2 14,8 20,8"/>
           <line x1="16" y1="13" x2="8" y2="13"/>
@@ -211,21 +199,35 @@ const ConsultationAttachmentsModal: React.FC<ConsultationAttachmentsModalProps> 
       );
     }
     return (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
         <polyline points="14,2 14,8 20,8"/>
       </svg>
     );
   };
 
+  const getFileTypeLabel = (fileType: string): string => {
+    if (fileType.startsWith('image/')) return 'Image';
+    if (fileType === 'application/pdf') return 'PDF';
+    if (fileType === 'text/plain') return 'Text';
+    if (fileType.includes('word')) return 'Word';
+    if (fileType.includes('excel') || fileType.includes('spreadsheet')) return 'Excel';
+    return 'Document';
+  };
+
   if (!isOpen || !consultation) return null;
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content large-modal">
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal-container large">
         <div className="modal-header">
-          <h2>Consultation Attachments</h2>
-          <button className="modal-close" onClick={onClose}>
+          <div className="modal-title-section">
+            <h2 className="modal-title">Upload Attachment</h2>
+            <p className="modal-subtitle">
+              Case: {consultation.case_number} | Patient: {consultation.patient?.first_name} {consultation.patient?.last_name}
+            </p>
+          </div>
+          <button className="modal-close" onClick={onClose} disabled={uploading}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18"/>
               <line x1="6" y1="6" x2="18" y2="18"/>
@@ -234,150 +236,147 @@ const ConsultationAttachmentsModal: React.FC<ConsultationAttachmentsModalProps> 
         </div>
 
         <div className="modal-body">
-          <div className="consultation-info-bar">
-            <div className="consultation-details">
-              <span className="case-number">Case: {consultation.case_number}</span>
-              <span className="patient-name">
-                Patient: {consultation.patient?.first_name} {consultation.patient?.last_name}
-              </span>
-            </div>
-            <span className="consultation-date">
-              {new Date(consultation.consultation_date).toLocaleDateString()}
-            </span>
-          </div>
-
           {error && (
             <div className="error-message">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="12" cy="12" r="10"/>
-                <line x1="15" y1="9" x2="9" y2="15"/>
-                <line x1="9" y1="9" x2="15" y2="15"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
               </svg>
               {error}
             </div>
           )}
 
-          {/* Upload Section */}
-          <div className="upload-section">
-            <h3>Upload New File</h3>
-            <div className="upload-form">
-              <div className="form-group">
-                <label htmlFor="file-upload">Select File</label>
-                <input
-                  type="file"
-                  id="file-upload"
-                  onChange={handleFileSelect}
-                  accept=".jpg,.jpeg,.png,.gif,.pdf,.txt,.doc,.docx"
-                  disabled={uploading}
-                />
-                <small className="form-hint">
-                  Supported formats: Images (JPG, PNG, GIF), PDF, Text, Documents. Max size: 10MB
-                </small>
-              </div>
+          {/* Drag and Drop Upload Area */}
+          <div
+            className={`upload-dropzone ${dragActive ? 'active' : ''} ${selectedFile ? 'has-file' : ''}`}
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+            onDragOver={handleDrag}
+            onDrop={handleDrop}
+            onClick={() => !selectedFile && fileInputRef.current?.click()}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              onChange={(e) => handleFileSelect(e.target.files)}
+              accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.txt,.doc,.docx,.xls,.xlsx"
+              style={{ display: 'none' }}
+              disabled={uploading}
+            />
 
-              {selectedFile && (
-                <div className="form-group">
-                  <label htmlFor="description">Description (Optional)</label>
-                  <input
-                    type="text"
-                    id="description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Brief description of the file"
-                    disabled={uploading}
-                  />
-                </div>
-              )}
-
-              {selectedFile && (
-                <div className="selected-file">
-                  <div className="file-info">
-                    {getFileIcon(selectedFile.type)}
-                    <div className="file-details">
-                      <div className="file-name">{selectedFile.name}</div>
-                      <div className="file-size">{formatFileSize(selectedFile.size)}</div>
-                    </div>
-                  </div>
-                  <button
-                    className="btn-primary"
-                    onClick={handleUpload}
-                    disabled={uploading}
-                  >
-                    {uploading ? 'Uploading...' : 'Upload File'}
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Attachments List */}
-          <div className="attachments-section">
-            <h3>Attached Files ({attachments.length})</h3>
-
-            {loading ? (
-              <div className="loading-message">Loading attachments...</div>
-            ) : attachments.length === 0 ? (
-              <div className="empty-state">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.64 16.2a2 2 0 0 1-2.83-2.83l8.49-8.49"/>
+            {!selectedFile ? (
+              <div className="upload-prompt">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
                 </svg>
-                <p>No files attached to this consultation</p>
+                <h3>Drag and drop your file here</h3>
+                <p>or click to browse</p>
+                <span className="upload-hint">
+                  Supported: Images, PDFs, Documents (Max 10MB)
+                </span>
               </div>
             ) : (
-              <div className="attachments-grid">
-                {attachments.map((attachment) => (
-                  <div key={attachment.id} className="attachment-card">
-                    <div className="attachment-header">
-                      <div className="file-icon">
-                        {getFileIcon(attachment.file_type)}
-                      </div>
-                      <div className="attachment-info">
-                        <div className="file-name" title={attachment.file_name}>
-                          {attachment.file_name}
-                        </div>
-                        <div className="file-meta">
-                          {attachment.file_size && formatFileSize(attachment.file_size)} •
-                          {formatDateTime(attachment.uploaded_at)}
-                        </div>
-                      </div>
-                      <button
-                        className="delete-btn"
-                        onClick={() => handleDelete(attachment)}
-                        title="Delete attachment"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polyline points="3,6 5,6 21,6"/>
-                          <path d="m19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1 2-2h4a2,2 0 0,1 2,2v2"/>
-                        </svg>
-                      </button>
-                    </div>
-
-                    {attachment.description && (
-                      <div className="attachment-description">
-                        {attachment.description}
-                      </div>
-                    )}
-
-                    <div className="attachment-actions">
-                      <button className="btn-secondary btn-sm">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                          <polyline points="7,10 12,15 17,10"/>
-                          <line x1="12" y1="15" x2="12" y2="3"/>
-                        </svg>
-                        Download
-                      </button>
-                    </div>
+              <div className="selected-file-preview">
+                <div className="file-preview-icon">
+                  {getFileIcon(selectedFile.type)}
+                </div>
+                <div className="file-preview-details">
+                  <h4>{selectedFile.name}</h4>
+                  <div className="file-preview-meta">
+                    <span className="file-type-badge">{getFileTypeLabel(selectedFile.type)}</span>
+                    <span className="file-size-text">{formatFileSize(selectedFile.size)}</span>
                   </div>
-                ))}
+                </div>
+                <button
+                  className="remove-file-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedFile(null);
+                    setDescription('');
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                  }}
+                  disabled={uploading}
+                  type="button"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
               </div>
             )}
           </div>
+
+          {/* Description Field */}
+          {selectedFile && (
+            <div className="form-group">
+              <label htmlFor="attachment-description">
+                Description (Optional)
+              </label>
+              <textarea
+                id="attachment-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Add a brief description of this file..."
+                rows={3}
+                disabled={uploading}
+                maxLength={500}
+              />
+              <small className="character-counter">{description.length}/500</small>
+            </div>
+          )}
+
+          {/* Upload Progress */}
+          {uploading && uploadProgress > 0 && (
+            <div className="upload-progress-container">
+              <div className="upload-progress-header">
+                <span>Uploading...</span>
+                <span>{uploadProgress}%</span>
+              </div>
+              <div className="upload-progress-bar">
+                <div
+                  className="upload-progress-fill"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="modal-footer">
-          <button className="btn-secondary" onClick={onClose}>
-            Close
+          <button
+            className="btn-secondary"
+            onClick={onClose}
+            disabled={uploading}
+          >
+            Cancel
+          </button>
+          <button
+            className="btn-primary"
+            onClick={handleUpload}
+            disabled={!selectedFile || uploading}
+          >
+            {uploading ? (
+              <>
+                <svg className="spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" opacity="0.25"/>
+                  <path d="M12 2 A 10 10 0 0 1 22 12" strokeLinecap="round"/>
+                </svg>
+                Uploading...
+              </>
+            ) : (
+              <>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                Upload File
+              </>
+            )}
           </button>
         </div>
       </div>

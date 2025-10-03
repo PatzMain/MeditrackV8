@@ -1,12 +1,21 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import TopBar from '../Layout/TopBar';
 import SideBar from '../Layout/SideBar';
 import './DashboardPage.css';
 import {
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  Line, ComposedChart, PieChart, Pie, Cell, BarChart, Bar, Area
-} from 'recharts';
+  Chart as ChartJS,
+  ArcElement,
+  Tooltip,
+  Legend,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Filler
+} from 'chart.js';
+import { Doughnut, Bar, Line } from 'react-chartjs-2';
 import {
   dashboardService,
   type DashboardStats,
@@ -15,9 +24,22 @@ import {
   type MedicineStatusData,
   type SuppliesStatusData,
   type PatientTrendData,
-  type EnhancedActivityTrendData
+  type EnhancedActivityTrendData,
+  type PatientDistributionData
 } from '../../services/dashboardService';
-import { ChartExportUtils } from '../../utils/chartExportUtils';
+
+// Register Chart.js components
+ChartJS.register(
+  ArcElement,
+  Tooltip,
+  Legend,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Filler
+);
 
 interface DashboardPageProps {
   children?: React.ReactNode;
@@ -47,6 +69,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ children }) => {
   const [suppliesStatus, setSuppliesStatus] = useState<SuppliesStatusData[]>([]);
   const [patientTrends, setPatientTrends] = useState<PatientTrendData[]>([]);
   const [activityTrends, setActivityTrends] = useState<EnhancedActivityTrendData[]>([]);
+  const [patientDistribution, setPatientDistribution] = useState<PatientDistributionData[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTimeframe, setSelectedTimeframe] = useState<'7' | '30' | '90'>('30');
 
@@ -57,19 +80,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ children }) => {
     suppliesStatus: true,
     patientTrends: true,
     activityTrends: true,
-    inventoryTrends: true
+    inventoryTrends: true,
+    patientDistribution: true
   });
 
-  // Chart refs for export functionality
-  const equipmentChartRef = useRef<HTMLDivElement>(null);
-  const medicineChartRef = useRef<HTMLDivElement>(null);
-  const suppliesChartRef = useRef<HTMLDivElement>(null);
-  const patientChartRef = useRef<HTMLDivElement>(null);
-  const activityChartRef = useRef<HTMLDivElement>(null);
-  const inventoryChartRef = useRef<HTMLDivElement>(null);
-
-  // Export loading state
-  const [exportLoading, setExportLoading] = useState<string | null>(null);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -92,7 +106,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ children }) => {
         medicineData,
         suppliesData,
         patientData,
-        activityData
+        activityData,
+        distributionData
       ] = await Promise.all([
         dashboardService.getDashboardStats(),
         dashboardService.getInventoryTrends(parseInt(selectedTimeframe)),
@@ -100,7 +115,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ children }) => {
         dashboardService.getMedicineStatus(),
         dashboardService.getSuppliesStatus(),
         dashboardService.getPatientTrends(parseInt(selectedTimeframe)),
-        dashboardService.getEnhancedActivityTrends(parseInt(selectedTimeframe))
+        dashboardService.getEnhancedActivityTrends(parseInt(selectedTimeframe)),
+        dashboardService.getPatientDistribution()
       ]);
 
       setStats(statsData);
@@ -110,6 +126,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ children }) => {
       setSuppliesStatus(suppliesData);
       setPatientTrends(patientData);
       setActivityTrends(activityData);
+      setPatientDistribution(distributionData);
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -158,148 +175,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ children }) => {
     setChartVisibility(newVisibility as typeof chartVisibility);
   };
 
-  const handleChartExport = async (chartKey: string, format: 'pdf' | 'docx') => {
-    try {
-      setExportLoading(`${chartKey}-${format}`);
-
-      let chartRef: React.RefObject<HTMLDivElement | null> | null = null;
-      let title = '';
-      let subtitle = '';
-      let data: any[] = [];
-
-      switch (chartKey) {
-        case 'equipment':
-          chartRef = equipmentChartRef;
-          title = 'Equipment Status Overview';
-          subtitle = 'Active vs Maintenance status';
-          data = equipmentStatus || [];
-          break;
-        case 'medicine':
-          chartRef = medicineChartRef;
-          title = 'Medicine Status Distribution';
-          subtitle = 'Active, Low Stock, Out of Stock, Expired';
-          data = medicineStatus || [];
-          break;
-        case 'supplies':
-          chartRef = suppliesChartRef;
-          title = 'Supplies Status Distribution';
-          subtitle = 'Active, Low Stock, Out of Stock, Expired';
-          data = suppliesStatus || [];
-          break;
-        case 'patients':
-          chartRef = patientChartRef;
-          title = 'Patient Activity Trends';
-          subtitle = 'Daily patient registrations and consultations';
-          data = patientTrends || [];
-          break;
-        case 'activity':
-          chartRef = activityChartRef;
-          title = 'System Activity Trends';
-          subtitle = 'User activities and system events over time';
-          data = activityTrends || [];
-          break;
-        case 'inventory':
-          chartRef = inventoryChartRef;
-          title = 'Inventory Overview Trends';
-          subtitle = 'Track inventory levels across departments and categories';
-          data = inventoryTrends || [];
-          break;
-        default:
-          throw new Error(`Invalid chart key: ${chartKey}`);
-      }
-
-      // Debug logging
-      console.log(`Exporting ${chartKey} as ${format}:`, {
-        title,
-        subtitle,
-        dataLength: data.length,
-        hasChartRef: !!chartRef,
-        hasChartElement: !!chartRef?.current
-      });
-
-      if (!chartRef?.current) {
-        throw new Error(`Chart element not found for ${chartKey}. Make sure the chart is visible and rendered.`);
-      }
-
-      await ChartExportUtils.exportChart(format, {
-        title,
-        subtitle,
-        data,
-        chartElement: chartRef.current
-      });
-
-      console.log(`Successfully exported ${chartKey} as ${format}`);
-
-    } catch (error) {
-      console.error(`Export failed for ${chartKey} (${format}):`, error);
-
-      // Provide more specific error messages
-      let errorMessage = 'Unknown error occurred';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (typeof error === 'string') {
-        errorMessage = error;
-      }
-
-      alert(`Failed to export ${chartKey} chart as ${format.toUpperCase()}: ${errorMessage}`);
-    } finally {
-      setExportLoading(null);
-    }
-  };
-
-  const renderExportButtons = (chartKey: string) => {
-    return (
-      <div className="chart-export-buttons">
-        <button
-          className={`export-btn pdf ${exportLoading === `${chartKey}-pdf` ? 'loading' : ''}`}
-          onClick={() => handleChartExport(chartKey, 'pdf')}
-          disabled={exportLoading !== null}
-          title="Export as PDF"
-        >
-          {exportLoading === `${chartKey}-pdf` ? (
-            <svg className="spinner" width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" strokeDasharray="2 4" strokeDashoffset="3">
-                <animate attributeName="stroke-dasharray" dur="0.6s" values="0 15;4 12;0 15" repeatCount="indefinite"/>
-                <animate attributeName="stroke-dashoffset" dur="0.6s" values="0;-4;-8" repeatCount="indefinite"/>
-              </circle>
-            </svg>
-          ) : (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2"/>
-              <polyline points="14,2 14,8 20,8" stroke="currentColor" strokeWidth="2"/>
-              <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2"/>
-              <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2"/>
-              <polyline points="10,9 9,9 8,9" stroke="currentColor" strokeWidth="2"/>
-            </svg>
-          )}
-          PDF
-        </button>
-        <button
-          className={`export-btn docx ${exportLoading === `${chartKey}-docx` ? 'loading' : ''}`}
-          onClick={() => handleChartExport(chartKey, 'docx')}
-          disabled={exportLoading !== null}
-          title="Export as DOCX"
-        >
-          {exportLoading === `${chartKey}-docx` ? (
-            <svg className="spinner" width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" strokeDasharray="2 4" strokeDashoffset="3">
-                <animate attributeName="stroke-dasharray" dur="0.6s" values="0 15;4 12;0 15" repeatCount="indefinite"/>
-                <animate attributeName="stroke-dashoffset" dur="0.6s" values="0;-4;-8" repeatCount="indefinite"/>
-              </circle>
-            </svg>
-          ) : (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2"/>
-              <polyline points="14,2 14,8 20,8" stroke="currentColor" strokeWidth="2"/>
-              <line x1="12" y1="18" x2="12" y2="12" stroke="currentColor" strokeWidth="2"/>
-              <line x1="9" y1="15" x2="15" y2="15" stroke="currentColor" strokeWidth="2"/>
-            </svg>
-          )}
-          DOCX
-        </button>
-      </div>
-    );
-  };
 
   const renderDashboardContent = () => {
     if (loading) {
@@ -363,20 +238,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ children }) => {
             <circle cx="12" cy="17" r="1" fill="currentColor"/>
           </svg>
         )
-      },
-      {
-        title: 'System Users',
-        value: stats.totalUsers.toString(),
-        change: `Active accounts`,
-        changeType: 'neutral',
-        icon: (
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2"/>
-            <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke="currentColor" strokeWidth="2"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" strokeWidth="2"/>
-          </svg>
-        )
       }
     ];
 
@@ -415,7 +276,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ children }) => {
                     suppliesStatus: 'Supplies',
                     patientTrends: 'Patients',
                     activityTrends: 'Activity',
-                    inventoryTrends: 'Inventory'
+                    inventoryTrends: 'Inventory',
+                    patientDistribution: 'Distribution'
                   };
                   return (
                     <button
@@ -462,7 +324,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ children }) => {
         <div className="stats-grid">
           {statCards.map((stat, index) => (
             <div key={index} className={`stat-card ${stat.changeType}`}>
-              <div className="stat-icon">
+              <div className="stat-icon-wrapper">
                 {stat.icon}
               </div>
               <div className="stat-content">
@@ -481,315 +343,557 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ children }) => {
 
           {/* Equipment Status Chart */}
           {chartVisibility.equipmentStatus && (
-            <div className="dashboard-card" ref={equipmentChartRef}>
+            <div className="dashboard-card span-2">
               <div className="card-header">
                 <div className="card-title-section">
                   <h3>Equipment Status Overview</h3>
                   <span className="card-subtitle">Active vs Maintenance status</span>
                 </div>
-                {renderExportButtons('equipment')}
               </div>
               <div className="chart-container">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={equipmentStatus}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percentage }) => `${name} (${percentage}%)`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="count"
-                    >
-                      {equipmentStatus.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value, name) => [value, name]} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <Doughnut
+                  data={{
+                    labels: equipmentStatus.map(item => item.status),
+                    datasets: [{
+                      data: equipmentStatus.map(item => item.count),
+                      backgroundColor: ['#3B82F6', '#60A5FA', '#93C5FD', '#1E40AF'],
+                      borderColor: '#ffffff',
+                      borderWidth: 2
+                    }]
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: 'bottom' as const,
+                        labels: {
+                          padding: 15,
+                          font: { size: 12, weight: 'bold' as const }
+                        }
+                      },
+                      tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        cornerRadius: 8,
+                        titleFont: { size: 14, weight: 'bold' as const },
+                        bodyFont: { size: 12 },
+                        callbacks: {
+                          label: (context) => {
+                            const label = context.label || '';
+                            const value = context.parsed || 0;
+                            const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `${label}: ${value} (${percentage}%)`;
+                          }
+                        }
+                      }
+                    },
+                    animation: {
+                      duration: 750,
+                      easing: 'easeInOutQuart' as const
+                    }
+                  }}
+                />
               </div>
             </div>
           )}
 
           {/* Medicine Status Chart */}
           {chartVisibility.medicineStatus && (
-            <div className="dashboard-card" ref={medicineChartRef}>
+            <div className="dashboard-card span-2">
               <div className="card-header">
                 <div className="card-title-section">
                   <h3>Medicine Status Distribution</h3>
                   <span className="card-subtitle">Active, Low Stock, Out of Stock, Expired</span>
                 </div>
-                {renderExportButtons('medicine')}
               </div>
               <div className="chart-container">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={medicineStatus}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="status" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip
-                      formatter={(value, name) => [value, 'Count']}
-                      labelFormatter={(label) => `Status: ${label}`}
-                    />
-                    <Bar dataKey="count" fill="#8884d8" radius={[4, 4, 0, 0]}>
-                      {medicineStatus.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <Bar
+                  data={{
+                    labels: medicineStatus.map(item => item.status),
+                    datasets: [{
+                      label: 'Count',
+                      data: medicineStatus.map(item => item.count),
+                      backgroundColor: ['#10B981', '#F59E0B', '#EF4444', '#6B7280'],
+                      borderColor: ['#059669', '#D97706', '#DC2626', '#4B5563'],
+                      borderWidth: 1,
+                      borderRadius: 6
+                    }]
+                  }}
+                  options={{
+                    indexAxis: 'y' as const,
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: { display: false },
+                      tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        cornerRadius: 8,
+                        titleFont: { size: 14, weight: 'bold' as const },
+                        bodyFont: { size: 12 }
+                      }
+                    },
+                    scales: {
+                      x: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                        ticks: { font: { size: 11 } }
+                      },
+                      y: {
+                        grid: { display: false },
+                        ticks: { font: { size: 11 } }
+                      }
+                    },
+                    animation: {
+                      duration: 750,
+                      easing: 'easeInOutQuart' as const
+                    }
+                  }}
+                />
               </div>
             </div>
           )}
 
           {/* Supplies Status Chart */}
           {chartVisibility.suppliesStatus && (
-            <div className="dashboard-card" ref={suppliesChartRef}>
+            <div className="dashboard-card span-2">
               <div className="card-header">
                 <div className="card-title-section">
                   <h3>Supplies Status Distribution</h3>
                   <span className="card-subtitle">Active, Low Stock, Out of Stock, Expired</span>
                 </div>
-                {renderExportButtons('supplies')}
               </div>
               <div className="chart-container">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={suppliesStatus}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="status" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip
-                      formatter={(value, name) => [value, 'Count']}
-                      labelFormatter={(label) => `Status: ${label}`}
-                    />
-                    <Bar dataKey="count" fill="#82ca9d" radius={[4, 4, 0, 0]}>
-                      {suppliesStatus.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <Bar
+                  data={{
+                    labels: suppliesStatus.map(item => item.status),
+                    datasets: [{
+                      label: 'Count',
+                      data: suppliesStatus.map(item => item.count),
+                      backgroundColor: ['#F59E0B', '#FBBF24', '#FCD34D', '#D97706'],
+                      borderColor: ['#D97706', '#F59E0B', '#FBBF24', '#B45309'],
+                      borderWidth: 1,
+                      borderRadius: 6
+                    }]
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: { display: false },
+                      tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        cornerRadius: 8,
+                        titleFont: { size: 14, weight: 'bold' as const },
+                        bodyFont: { size: 12 }
+                      }
+                    },
+                    scales: {
+                      x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 11 } }
+                      },
+                      y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                        ticks: { font: { size: 11 } }
+                      }
+                    },
+                    animation: {
+                      duration: 750,
+                      easing: 'easeInOutQuart' as const
+                    }
+                  }}
+                />
               </div>
             </div>
           )}
 
           {/* Patient Trends Chart */}
           {chartVisibility.patientTrends && (
-            <div className="dashboard-card" ref={patientChartRef}>
+            <div className="dashboard-card span-2">
               <div className="card-header">
                 <div className="card-title-section">
                   <h3>Patient Activity Trends</h3>
                   <span className="card-subtitle">Daily patient registrations and consultations</span>
                 </div>
-                {renderExportButtons('patients')}
               </div>
               <div className="chart-container">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={patientTrends}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 11 }}
-                      tickFormatter={(value) => {
-                        if (window.innerWidth < 768) {
-                          return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                <Line
+                  data={{
+                    labels: patientTrends.map(item =>
+                      new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                    ),
+                    datasets: [
+                      {
+                        label: 'Total Patients',
+                        data: patientTrends.map(item => item.patients),
+                        backgroundColor: 'rgba(236, 72, 153, 0.2)',
+                        borderColor: '#EC4899',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 3,
+                        pointHoverRadius: 5
+                      },
+                      {
+                        label: 'Consultations',
+                        data: patientTrends.map(item => item.consultations),
+                        backgroundColor: 'rgba(244, 114, 182, 0.2)',
+                        borderColor: '#F472B6',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 3,
+                        pointHoverRadius: 5
+                      },
+                      {
+                        label: 'New Patients',
+                        data: patientTrends.map(item => item.newPatients),
+                        backgroundColor: 'rgba(251, 207, 232, 0.2)',
+                        borderColor: '#FBCFE8',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 3,
+                        pointHoverRadius: 5
+                      }
+                    ]
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                      mode: 'index' as const,
+                      intersect: false
+                    },
+                    plugins: {
+                      legend: {
+                        position: 'bottom' as const,
+                        labels: {
+                          padding: 15,
+                          font: { size: 12, weight: 'bold' as const }
                         }
-                        return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                      }}
-                    />
-                    <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip
-                      labelFormatter={(label) => `Date: ${new Date(label).toLocaleDateString()}`}
-                      formatter={(value, name) => [value, name === 'patients' ? 'Total Patients' : name === 'consultations' ? 'Consultations' : 'New Patients']}
-                    />
-                    <Legend />
-                    <Area
-                      type="monotone"
-                      dataKey="patients"
-                      stackId="1"
-                      stroke="#8884d8"
-                      fill="#8884d8"
-                      fillOpacity={0.7}
-                      name="Total Patients"
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="consultations"
-                      stackId="1"
-                      stroke="#82ca9d"
-                      fill="#82ca9d"
-                      fillOpacity={0.7}
-                      name="Consultations"
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="newPatients"
-                      stroke="#ffc658"
-                      strokeWidth={2}
-                      dot={{ r: 3 }}
-                      name="New Patients"
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
+                      },
+                      tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        cornerRadius: 8,
+                        titleFont: { size: 14, weight: 'bold' as const },
+                        bodyFont: { size: 12 }
+                      }
+                    },
+                    scales: {
+                      x: {
+                        grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                        ticks: { font: { size: 11 } }
+                      },
+                      y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                        ticks: { font: { size: 11 } }
+                      }
+                    },
+                    animation: {
+                      duration: 750,
+                      easing: 'easeInOutQuart' as const
+                    }
+                  }}
+                />
               </div>
             </div>
           )}
 
           {/* Activity Logs Trends */}
           {chartVisibility.activityTrends && (
-            <div className="dashboard-card span-2" ref={activityChartRef}>
+            <div className="dashboard-card span-2">
               <div className="card-header">
                 <div className="card-title-section">
                   <h3>System Activity Trends</h3>
                   <span className="card-subtitle">User activities and system events over time</span>
                 </div>
-                {renderExportButtons('activity')}
               </div>
               <div className="chart-container">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={activityTrends}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 12 }}
-                      tickFormatter={(value) => {
-                        if (window.innerWidth < 768) {
-                          return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                <Bar
+                  data={{
+                    labels: activityTrends.map(item =>
+                      new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                    ),
+                    datasets: [
+                      {
+                        label: 'Total Actions',
+                        data: activityTrends.map(item => item.actions),
+                        backgroundColor: '#8B5CF6',
+                        borderColor: '#7C3AED',
+                        borderWidth: 1,
+                        borderRadius: 4
+                      },
+                      {
+                        label: 'Active Users',
+                        data: activityTrends.map(item => item.users),
+                        backgroundColor: '#6366F1',
+                        borderColor: '#4F46E5',
+                        borderWidth: 1,
+                        borderRadius: 4
+                      }
+                    ]
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                      mode: 'index' as const,
+                      intersect: false
+                    },
+                    plugins: {
+                      legend: {
+                        position: 'bottom' as const,
+                        labels: {
+                          padding: 15,
+                          font: { size: 12, weight: 'bold' as const }
                         }
-                        return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                      }}
-                    />
-                    <YAxis yAxisId="left" tick={{ fontSize: 12 }} />
-                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} />
-                    <Tooltip
-                      labelFormatter={(label) => `Date: ${new Date(label).toLocaleDateString()}`}
-                      formatter={(value, name) => [
-                        value,
-                        name === 'actions' ? 'Total Actions' :
-                        name === 'users' ? 'Active Users' :
-                        name === 'severity.info' ? 'Info' :
-                        name === 'severity.warning' ? 'Warnings' :
-                        name === 'severity.error' ? 'Errors' : name
-                      ]}
-                    />
-                    <Legend />
-                    <Bar yAxisId="left" dataKey="actions" fill="#8884d8" name="Total Actions" />
-                    <Line
-                      yAxisId="right"
-                      type="monotone"
-                      dataKey="users"
-                      stroke="#82ca9d"
-                      strokeWidth={2}
-                      dot={{ r: 3 }}
-                      name="Active Users"
-                    />
-                    <Area
-                      yAxisId="left"
-                      type="monotone"
-                      dataKey="severity.error"
-                      stackId="1"
-                      stroke="#EF4444"
-                      fill="#EF4444"
-                      fillOpacity={0.6}
-                      name="Errors"
-                    />
-                    <Area
-                      yAxisId="left"
-                      type="monotone"
-                      dataKey="severity.warning"
-                      stackId="1"
-                      stroke="#F59E0B"
-                      fill="#F59E0B"
-                      fillOpacity={0.6}
-                      name="Warnings"
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
+                      },
+                      tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        cornerRadius: 8,
+                        titleFont: { size: 14, weight: 'bold' as const },
+                        bodyFont: { size: 12 }
+                      }
+                    },
+                    scales: {
+                      x: {
+                        grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                        ticks: { font: { size: 11 } }
+                      },
+                      y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                        ticks: { font: { size: 11 } }
+                      }
+                    },
+                    animation: {
+                      duration: 750,
+                      easing: 'easeInOutQuart' as const
+                    }
+                  }}
+                />
               </div>
             </div>
           )}
 
           {/* Inventory Overview Trends */}
           {chartVisibility.inventoryTrends && (
-            <div className="dashboard-card span-2" ref={inventoryChartRef}>
+            <div className="dashboard-card span-2">
               <div className="card-header">
                 <div className="card-title-section">
                   <h3>Inventory Overview Trends</h3>
                   <span className="card-subtitle">Track inventory levels across departments and categories</span>
                 </div>
-                {renderExportButtons('inventory')}
               </div>
               <div className="chart-container">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={inventoryTrends}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 12 }}
-                      tickFormatter={(value) => {
-                        if (window.innerWidth < 768) {
-                          return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                <Line
+                  data={{
+                    labels: inventoryTrends.map(item =>
+                      new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                    ),
+                    datasets: [
+                      {
+                        label: 'Total Items',
+                        data: inventoryTrends.map(item => item.total),
+                        backgroundColor: 'rgba(59, 130, 246, 0.3)',
+                        borderColor: '#3B82F6',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 3,
+                        pointHoverRadius: 5
+                      },
+                      {
+                        label: 'Medical Items',
+                        data: inventoryTrends.map(item => item.medical),
+                        backgroundColor: 'transparent',
+                        borderColor: '#10B981',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4,
+                        pointRadius: 3,
+                        pointHoverRadius: 5
+                      },
+                      {
+                        label: 'Dental Items',
+                        data: inventoryTrends.map(item => item.dental),
+                        backgroundColor: 'transparent',
+                        borderColor: '#F59E0B',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4,
+                        pointRadius: 3,
+                        pointHoverRadius: 5
+                      },
+                      {
+                        label: 'Low Stock Items',
+                        data: inventoryTrends.map(item => item.lowStock),
+                        backgroundColor: 'transparent',
+                        borderColor: '#EF4444',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4,
+                        pointRadius: 3,
+                        pointHoverRadius: 5
+                      },
+                      {
+                        label: 'Expired Items',
+                        data: inventoryTrends.map(item => item.expired),
+                        backgroundColor: 'transparent',
+                        borderColor: '#8B5CF6',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4,
+                        pointRadius: 3,
+                        pointHoverRadius: 5
+                      }
+                    ]
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                      mode: 'index' as const,
+                      intersect: false
+                    },
+                    plugins: {
+                      legend: {
+                        position: 'bottom' as const,
+                        labels: {
+                          padding: 15,
+                          font: { size: 12, weight: 'bold' as const }
                         }
-                        return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                      }}
-                    />
-                    <YAxis tick={{ fontSize: 12 }} />
-                    <Tooltip
-                      labelFormatter={(label) => `Date: ${new Date(label).toLocaleDateString()}`}
-                      formatter={(value, name) => [
-                        value,
-                        name === 'total' ? 'Total Items' :
-                        name === 'medical' ? 'Medical Items' :
-                        name === 'dental' ? 'Dental Items' :
-                        name === 'lowStock' ? 'Low Stock Items' :
-                        name === 'expired' ? 'Expired Items' : name
-                      ]}
-                    />
-                    <Legend />
-                    <Area
-                      type="monotone"
-                      dataKey="total"
-                      stroke="#8884d8"
-                      fill="#8884d8"
-                      fillOpacity={0.3}
-                      name="Total Items"
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="medical"
-                      stroke="#82ca9d"
-                      strokeWidth={2}
-                      dot={{ r: 3 }}
-                      name="Medical Items"
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="dental"
-                      stroke="#ffc658"
-                      strokeWidth={2}
-                      dot={{ r: 3 }}
-                      name="Dental Items"
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="lowStock"
-                      stroke="#ff8042"
-                      strokeWidth={2}
-                      dot={{ r: 3 }}
-                      name="Low Stock Items"
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="expired"
-                      stroke="#8b5cf6"
-                      strokeWidth={2}
-                      dot={{ r: 3 }}
-                      name="Expired Items"
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
+                      },
+                      tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        cornerRadius: 8,
+                        titleFont: { size: 14, weight: 'bold' as const },
+                        bodyFont: { size: 12 }
+                      }
+                    },
+                    scales: {
+                      x: {
+                        grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                        ticks: { font: { size: 11 } }
+                      },
+                      y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                        ticks: { font: { size: 11 } }
+                      }
+                    },
+                    animation: {
+                      duration: 750,
+                      easing: 'easeInOutQuart' as const
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Patient Distribution Chart */}
+          {chartVisibility.patientDistribution && (
+            <div className="dashboard-card span-2">
+              <div className="card-header">
+                <div className="card-title-section">
+                  <h3>Student Patient Distribution</h3>
+                  <span className="card-subtitle">Total students by course and year level</span>
+                </div>
+              </div>
+              <div className="chart-container">
+                <Bar
+                  data={{
+                    labels: Array.from(new Set(patientDistribution.map(item => item.course))),
+                    datasets: (() => {
+                      // Get unique year levels
+                      const yearLevels = Array.from(new Set(patientDistribution.map(item => item.yearLevel).filter(y => y !== null))).sort();
+
+                      // Color palette for year levels
+                      const colors = [
+                        { bg: '#3B82F6', border: '#2563EB' },
+                        { bg: '#8B5CF6', border: '#7C3AED' },
+                        { bg: '#10B981', border: '#059669' },
+                        { bg: '#F59E0B', border: '#D97706' },
+                        { bg: '#EF4444', border: '#DC2626' },
+                        { bg: '#EC4899', border: '#DB2777' }
+                      ];
+
+                      return yearLevels.map((year, index) => {
+                        const courses = Array.from(new Set(patientDistribution.map(item => item.course)));
+                        const data = courses.map(course => {
+                          const entry = patientDistribution.find(d => d.course === course && d.yearLevel === year);
+                          return entry ? entry.count : 0;
+                        });
+
+                        return {
+                          label: `Year ${year}`,
+                          data,
+                          backgroundColor: colors[index % colors.length].bg,
+                          borderColor: colors[index % colors.length].border,
+                          borderWidth: 1,
+                          borderRadius: 4
+                        };
+                      });
+                    })()
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                      mode: 'index' as const,
+                      intersect: false
+                    },
+                    plugins: {
+                      legend: {
+                        position: 'bottom' as const,
+                        labels: {
+                          padding: 15,
+                          font: { size: 12, weight: 'bold' as const }
+                        }
+                      },
+                      tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        cornerRadius: 8,
+                        titleFont: { size: 14, weight: 'bold' as const },
+                        bodyFont: { size: 12 }
+                      }
+                    },
+                    scales: {
+                      x: {
+                        grid: { display: false },
+                        ticks: {
+                          font: { size: 10 },
+                          maxRotation: 45,
+                          minRotation: 45
+                        }
+                      },
+                      y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                        ticks: {
+                          font: { size: 11 },
+                          stepSize: 1
+                        }
+                      }
+                    },
+                    animation: {
+                      duration: 750,
+                      easing: 'easeInOutQuart' as const
+                    }
+                  }}
+                />
               </div>
             </div>
           )}

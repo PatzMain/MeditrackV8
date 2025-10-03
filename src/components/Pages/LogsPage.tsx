@@ -206,6 +206,83 @@ const LogsPage: React.FC = () => {
         <p className="page-subtitle">Monitor and audit all system activities and user actions</p>
       </div>
 
+      {/* Log Statistics */}
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-icon-wrapper">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M12 20h9" stroke="currentColor" strokeWidth="2"/>
+              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" strokeWidth="2"/>
+            </svg>
+          </div>
+          <div className="stat-content">
+            <div className="stat-value">{filteredLogs.length}</div>
+            <div className="stat-title">Total Activity Logs</div>
+            <div className="stat-change positive">All recorded actions</div>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon-wrapper">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="currentColor" strokeWidth="2"/>
+              <line x1="12" y1="9" x2="12" y2="13" stroke="currentColor" strokeWidth="2"/>
+              <circle cx="12" cy="17" r="1" fill="currentColor"/>
+            </svg>
+          </div>
+          <div className="stat-content">
+            <div className="stat-value">{filteredLogs.filter(log => log.severity === 'warning').length}</div>
+            <div className="stat-title">Warnings</div>
+            <div className={`stat-change ${filteredLogs.filter(log => log.severity === 'warning').length > 0 ? 'warning' : 'positive'}`}>
+              {filteredLogs.filter(log => log.severity === 'warning').length > 0 ? 'Needs attention' : 'None found'}
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon-wrapper">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+              <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" strokeWidth="2"/>
+              <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" strokeWidth="2"/>
+            </svg>
+          </div>
+          <div className="stat-content">
+            <div className="stat-value">{filteredLogs.filter(log => log.severity === 'error').length}</div>
+            <div className="stat-title">Errors</div>
+            <div className={`stat-change ${filteredLogs.filter(log => log.severity === 'error').length > 0 ? 'danger' : 'positive'}`}>
+              {filteredLogs.filter(log => log.severity === 'error').length > 0 ? 'Critical issues' : 'None found'}
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon-wrapper">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+              <polyline points="12,6 12,12 16,14" stroke="currentColor" strokeWidth="2"/>
+            </svg>
+          </div>
+          <div className="stat-content">
+            <div className="stat-value">
+              {logs.filter(log =>
+                new Date(log.timestamp) > new Date(Date.now() - 24 * 60 * 60 * 1000)
+              ).length}
+            </div>
+            <div className="stat-title">Last 24 Hours</div>
+            <div className="stat-change positive">Recent activity</div>
+          </div>
+        </div>
+      </div>
+
+      {loading && (
+        <div className="loading-message">Loading activity logs...</div>
+      )}
+
+      {error && (
+        <div className="error-message">{error}</div>
+      )}
+
       {/* Filters and Search */}
       <div className="filters-section">
         <div className="filters-row">
@@ -257,83 +334,6 @@ const LogsPage: React.FC = () => {
             </select>
           </div>
 
-        </div>
-      </div>
-
-      {loading && (
-        <div className="loading-message">Loading activity logs...</div>
-      )}
-
-      {error && (
-        <div className="error-message">{error}</div>
-      )}
-
-      {/* Log Statistics */}
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M12 20h9" stroke="currentColor" strokeWidth="2"/>
-              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" strokeWidth="2"/>
-            </svg>
-          </div>
-          <div className="stat-content">
-            <div className="stat-value">{filteredLogs.length}</div>
-            <div className="stat-title">Total Activity Logs</div>
-            <div className="stat-change neutral">All recorded actions</div>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="currentColor" strokeWidth="2"/>
-              <line x1="12" y1="9" x2="12" y2="13" stroke="currentColor" strokeWidth="2"/>
-              <circle cx="12" cy="17" r="1" fill="currentColor"/>
-            </svg>
-          </div>
-          <div className="stat-content">
-            <div className="stat-value">{filteredLogs.filter(log => log.severity === 'warning').length}</div>
-            <div className="stat-title">Warnings</div>
-            <div className={`stat-change ${filteredLogs.filter(log => log.severity === 'warning').length > 0 ? 'warning' : 'positive'}`}>
-              {filteredLogs.filter(log => log.severity === 'warning').length > 0 ? 'Needs attention' : 'None found'}
-            </div>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-              <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" strokeWidth="2"/>
-              <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" strokeWidth="2"/>
-            </svg>
-          </div>
-          <div className="stat-content">
-            <div className="stat-value">{filteredLogs.filter(log => log.severity === 'error').length}</div>
-            <div className="stat-title">Errors</div>
-            <div className={`stat-change ${filteredLogs.filter(log => log.severity === 'error').length > 0 ? 'danger' : 'positive'}`}>
-              {filteredLogs.filter(log => log.severity === 'error').length > 0 ? 'Critical issues' : 'None found'}
-            </div>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-              <polyline points="12,6 12,12 16,14" stroke="currentColor" strokeWidth="2"/>
-            </svg>
-          </div>
-          <div className="stat-content">
-            <div className="stat-value">
-              {logs.filter(log =>
-                new Date(log.timestamp) > new Date(Date.now() - 24 * 60 * 60 * 1000)
-              ).length}
-            </div>
-            <div className="stat-title">Last 24 Hours</div>
-            <div className="stat-change neutral">Recent activity</div>
-          </div>
         </div>
       </div>
 

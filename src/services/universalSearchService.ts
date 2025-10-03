@@ -4,7 +4,7 @@ import { cacheService, CACHE_TTL } from './cacheService';
 
 export interface SearchResult {
   id: string;
-  type: 'inventory' | 'user' | 'action' | 'archive' | 'log';
+  type: 'inventory' | 'user' | 'action' | 'archive' | 'log' | 'patient' | 'consultation';
   title: string;
   subtitle?: string;
   description?: string;
@@ -37,6 +37,15 @@ class UniversalSearchService {
 
   // Quick actions and navigation shortcuts (excluding dashboard per requirement)
   private readonly QUICK_ACTIONS: SearchResult[] = [
+    {
+      id: 'nav-patient-monitoring',
+      type: 'action',
+      title: 'Patient Monitoring',
+      subtitle: 'View and manage patients',
+      icon: '🏥',
+      url: '/patient-monitoring',
+      priority: 95
+    },
     {
       id: 'nav-inventory',
       type: 'action',
@@ -74,6 +83,15 @@ class UniversalSearchService {
       priority: 70
     },
     {
+      id: 'action-add-patient',
+      type: 'action',
+      title: 'Add Patient',
+      subtitle: 'Register a new patient',
+      icon: '👤',
+      action: () => console.log('Open add patient modal'),
+      priority: 68
+    },
+    {
       id: 'action-add-inventory',
       type: 'action',
       title: 'Add Inventory Item',
@@ -86,6 +104,8 @@ class UniversalSearchService {
 
   // Common search terms and shortcuts (excluding dashboard and admin)
   private readonly SEARCH_SHORTCUTS: Record<string, string[]> = {
+    'patient': ['patients', 'patient monitoring', 'medical records', 'hospital', 'clinic'],
+    'consultation': ['consultations', 'visit', 'appointment', 'checkup', 'diagnosis'],
     'inventory': ['supplies', 'medicine', 'equipment', 'stock', 'medical', 'items'],
     'archive': ['archives', 'history', 'old', 'deleted', 'stored', 'past'],
     'logs': ['activity', 'audit', 'history', 'events', 'actions', 'tracking'],
@@ -111,11 +131,15 @@ class UniversalSearchService {
 
     try {
       const [
+        patientResults,
+        consultationResults,
         inventoryResults,
         actionResults,
         archiveResults,
         logResults
       ] = await Promise.all([
+        this.searchPatients(normalizedQuery),
+        this.searchConsultations(normalizedQuery),
         this.searchInventory(normalizedQuery),
         this.searchActions(normalizedQuery),
         this.searchArchives(normalizedQuery),
@@ -127,6 +151,16 @@ class UniversalSearchService {
           name: 'Quick Actions',
           results: actionResults,
           total: actionResults.length
+        },
+        {
+          name: 'Patients',
+          results: patientResults.slice(0, this.MAX_RESULTS_PER_CATEGORY),
+          total: patientResults.length
+        },
+        {
+          name: 'Consultations',
+          results: consultationResults.slice(0, this.MAX_RESULTS_PER_CATEGORY),
+          total: consultationResults.length
         },
         {
           name: 'Inventory',
@@ -190,6 +224,116 @@ class UniversalSearchService {
     };
   }
 
+
+  private async searchPatients(query: string): Promise<SearchResult[]> {
+    try {
+      return await cacheService.cachedCall(
+        'search',
+        'patients',
+        async () => {
+          const { data: patients, error } = await supabase
+            .from('patients')
+            .select('*')
+            .eq('status', 'active');
+
+          if (error) {
+            console.error('Error fetching patients:', error);
+            return [];
+          }
+
+          const matchedPatients = patients.filter((patient: any) =>
+            (patient.first_name || '').toLowerCase().includes(query) ||
+            (patient.last_name || '').toLowerCase().includes(query) ||
+            (patient.middle_name || '').toLowerCase().includes(query) ||
+            (patient.patient_id || '').toLowerCase().includes(query) ||
+            (patient.patient_type || '').toLowerCase().includes(query) ||
+            (patient.course || '').toLowerCase().includes(query) ||
+            (patient.department || '').toLowerCase().includes(query)
+          );
+
+          return matchedPatients
+            .map((patient: any) => ({
+              id: `patient_${patient.id}`,
+              type: 'patient' as const,
+              title: `${patient.first_name} ${patient.middle_name ? patient.middle_name + ' ' : ''}${patient.last_name}`,
+              subtitle: `${patient.patient_type} - ID: ${patient.patient_id}`,
+              description: `Age: ${patient.age || 'N/A'} | Sex: ${patient.sex}`,
+              metadata: patient.course ? `${patient.course}` : patient.department || '',
+              icon: this.getPatientIcon(patient.patient_type),
+              url: `/patient-monitoring?patientId=${patient.id}`,
+              priority: 60,
+              itemData: patient
+            }))
+            .sort((a: any, b: any) => b.priority - a.priority);
+        },
+        { query },
+        CACHE_TTL.MEDIUM
+      );
+    } catch (error) {
+      console.error('Error searching patients:', error);
+      return [];
+    }
+  }
+
+  private async searchConsultations(query: string): Promise<SearchResult[]> {
+    try {
+      return await cacheService.cachedCall(
+        'search',
+        'consultations',
+        async () => {
+          const { data: consultations, error } = await supabase
+            .from('consultations')
+            .select(`
+              *,
+              patient:patients(*)
+            `)
+            .order('consultation_date', { ascending: false })
+            .limit(50);
+
+          if (error) {
+            console.error('Error fetching consultations:', error);
+            return [];
+          }
+
+          const matchedConsultations = consultations.filter((consultation: any) =>
+            (consultation.case_number || '').toLowerCase().includes(query) ||
+            (consultation.chief_complaint || '').toLowerCase().includes(query) ||
+            (consultation.diagnosis || '').toLowerCase().includes(query) ||
+            (consultation.treatment || '').toLowerCase().includes(query) ||
+            (consultation.patient?.first_name || '').toLowerCase().includes(query) ||
+            (consultation.patient?.last_name || '').toLowerCase().includes(query) ||
+            (consultation.patient?.patient_id || '').toLowerCase().includes(query)
+          );
+
+          return matchedConsultations
+            .map((consultation: any) => {
+              const patientName = consultation.patient
+                ? `${consultation.patient.first_name} ${consultation.patient.last_name}`
+                : 'Unknown Patient';
+
+              return {
+                id: `consultation_${consultation.id}`,
+                type: 'consultation' as const,
+                title: `Case ${consultation.case_number}`,
+                subtitle: `Patient: ${patientName}`,
+                description: `Chief Complaint: ${consultation.chief_complaint || 'N/A'}`,
+                metadata: `${consultation.consultation_date} - ${consultation.status}`,
+                icon: this.getConsultationIcon(consultation.status),
+                url: `/patient-monitoring?consultationId=${consultation.id}`,
+                priority: 55,
+                itemData: consultation
+              };
+            })
+            .sort((a: any, b: any) => b.priority - a.priority);
+        },
+        { query },
+        CACHE_TTL.SHORT
+      );
+    } catch (error) {
+      console.error('Error searching consultations:', error);
+      return [];
+    }
+  }
 
   private async searchInventory(query: string): Promise<SearchResult[]> {
     try {
@@ -376,7 +520,7 @@ class UniversalSearchService {
 
     // Add common medical terms
     const medicalTerms = [
-      'medicine', 'supplies', 'equipment', 'inventory', 'stock'
+      'patient', 'consultation', 'medicine', 'supplies', 'equipment', 'inventory', 'stock'
     ];
 
     medicalTerms.forEach(term => {
@@ -429,6 +573,34 @@ class UniversalSearchService {
       case 'info':
       default:
         return '📝';
+    }
+  }
+
+  private getPatientIcon(patientType?: string): string {
+    switch ((patientType || '').toLowerCase()) {
+      case 'student':
+        return '🎓';
+      case 'employee':
+        return '👔';
+      case 'dependent':
+        return '👨‍👩‍👧';
+      case 'opd':
+        return '🏥';
+      default:
+        return '👤';
+    }
+  }
+
+  private getConsultationIcon(status?: string): string {
+    switch ((status || '').toLowerCase()) {
+      case 'active':
+        return '🩺';
+      case 'completed':
+        return '✅';
+      case 'cancelled':
+        return '❌';
+      default:
+        return '📋';
     }
   }
 

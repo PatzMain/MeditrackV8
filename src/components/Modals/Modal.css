@@ -1,6 +1,6 @@
 /* ===========================================
    MEDITRACK MODAL SYSTEM - GENERAL STYLES
-   Modern, Responsive, Professional Design
+   Clean, Professional Design
    =========================================== */
 
 /* Modal Overlay */
@@ -12,59 +12,34 @@
   bottom: 0;
   width: 100vw;
   height: 100vh;
-  height: 100dvh; /* Dynamic viewport height for mobile */
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.85) 100%);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  height: 100dvh;
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
   padding: 1rem;
-  animation: modalOverlayFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overscroll-behavior: contain;
-  overflow: hidden; /* Prevent any overflow issues */
-}
-
-@keyframes modalOverlayFadeIn {
-  from {
-    opacity: 0;
-    backdrop-filter: blur(0px);
-  }
-  to {
-    opacity: 1;
-    backdrop-filter: blur(12px);
-  }
+  overflow: hidden;
+  /* Prevent touch scrolling on overlay */
+  touch-action: none;
+  /* Prevent elastic scrolling on iOS */
+  -webkit-overflow-scrolling: auto;
 }
 
 /* Modal Container */
 .modal-content {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  border-radius: 20px;
-  box-shadow:
-    0 25px 50px rgba(0, 0, 0, 0.25),
-    0 0 0 1px rgba(255, 255, 255, 0.8),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   width: 100%;
   max-width: 600px;
   max-height: 90vh;
-  max-height: 90dvh; /* Dynamic viewport height for mobile */
+  max-height: 90dvh;
   position: relative;
   overflow: hidden;
-  animation: modalContentSlideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
-}
-
-@keyframes modalContentSlideUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
 }
 
 /* Modal Header */
@@ -72,89 +47,60 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 2rem 2.5rem 1.5rem;
-  background: linear-gradient(135deg, rgba(30, 60, 114, 0.05) 0%, rgba(248, 250, 252, 0.9) 100%);
-  border-bottom: 1px solid rgba(229, 231, 235, 0.8);
-  position: relative;
+  padding: 1.5rem 2rem;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
   flex-shrink: 0;
-}
-
-.modal-header::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 2.5rem;
-  right: 2.5rem;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(30, 60, 114, 0.2), transparent);
 }
 
 .modal-title {
   font-size: 1.5rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #1e3c72;
   margin: 0;
   line-height: 1.2;
-  letter-spacing: -0.025em;
 }
 
 .modal-close-btn {
-  background: linear-gradient(135deg, #f8fafc 0%, #e5e7eb 100%);
+  background: #ffffff;
   width: 40px;
   height: 40px;
-  border: 1px solid rgba(229, 231, 235, 0.8);
-  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   cursor: pointer;
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
   color: #6b7280;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  position: relative;
-  overflow: hidden;
-}
-
-.modal-close-btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.1), transparent);
-  transition: left 0.6s ease;
-}
-
-.modal-close-btn:hover::before {
-  left: 100%;
 }
 
 .modal-close-btn:hover {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  background: #ef4444;
   color: #ffffff;
-  transform: scale(1.05) rotate(90deg);
-  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+  border-color: #ef4444;
 }
 
 .modal-close-btn svg {
   width: 20px;
   height: 20px;
-  transition: transform 0.3s ease;
 }
 
 /* Modal Body */
 .modal-body {
-  padding: 2rem 2.5rem;
+  padding: 1.5rem 2rem;
   overflow-y: auto;
   flex: 1;
   scrollbar-width: thin;
-  scrollbar-color: rgba(30, 60, 114, 0.3) transparent;
-  background: rgba(255, 255, 255, 0.5);
+  scrollbar-color: #1e3c72 #f3f4f6;
+  background: #ffffff;
+  /* Allow touch scrolling only in modal body */
+  touch-action: pan-y;
+  /* Enable momentum scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
+  /* Prevent overscroll bounce */
+  overscroll-behavior: contain;
 }
 
 .modal-body::-webkit-scrollbar {
@@ -162,62 +108,42 @@
 }
 
 .modal-body::-webkit-scrollbar-track {
-  background: transparent;
+  background: #f3f4f6;
 }
 
 .modal-body::-webkit-scrollbar-thumb {
-  background: rgba(30, 60, 114, 0.3);
+  background: #1e3c72;
   border-radius: 3px;
-  transition: background 0.3s ease;
 }
 
 .modal-body::-webkit-scrollbar-thumb:hover {
-  background: rgba(30, 60, 114, 0.5);
+  background: #2a5298;
 }
 
 /* Form Styles */
 .form-group {
   margin-bottom: 1.5rem;
-  position: relative;
 }
 
 .form-group label {
   display: block;
   font-weight: 600;
-  margin-bottom: 0.75rem;
-  color: #1f2937;
-  font-size: 0.95rem;
-  position: relative;
-  transition: all 0.3s ease;
-}
-
-.form-group label::after {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  left: 0;
-  width: 0;
-  height: 2px;
-  background: linear-gradient(90deg, #1e3c72, #2a5298);
-  transition: width 0.3s ease;
-}
-
-.form-group:focus-within label::after {
-  width: 100%;
+  margin-bottom: 0.5rem;
+  color: #374151;
+  font-size: 0.875rem;
 }
 
 .form-group input,
 .form-group textarea,
 .form-group select {
   width: 100%;
-  padding: 1rem 1.25rem;
-  border: 2px solid transparent;
-  border-radius: 12px;
-  font-size: 0.95rem;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0.75rem 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  background: #ffffff;
+  transition: all 0.2s ease;
   color: #374151;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.8);
   outline: none;
 }
 
@@ -225,21 +151,12 @@
 .form-group textarea:focus,
 .form-group select:focus {
   border-color: #1e3c72;
-  background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(30, 60, 114, 0.1), 0 4px 20px rgba(0, 0, 0, 0.1);
-  transform: translateY(-1px);
+  box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1);
 }
 
 .form-group input::placeholder,
 .form-group textarea::placeholder {
   color: #9ca3af;
-  font-style: italic;
-  transition: opacity 0.3s ease;
-}
-
-.form-group input:focus::placeholder,
-.form-group textarea:focus::placeholder {
-  opacity: 0.7;
 }
 
 .form-group textarea {
@@ -306,147 +223,78 @@
 .modal-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 1rem;
-  padding: 1.5rem 2.5rem 2rem;
-  background: linear-gradient(135deg, rgba(248, 250, 252, 0.9) 0%, rgba(229, 231, 235, 0.3) 100%);
-  border-top: 1px solid rgba(229, 231, 235, 0.8);
-  position: relative;
+  gap: 0.75rem;
+  padding: 1.5rem 2rem;
+  background: #f9fafb;
+  border-top: 1px solid #e5e7eb;
   flex-shrink: 0;
-}
-
-.modal-footer::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 2.5rem;
-  right: 2.5rem;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(30, 60, 114, 0.2), transparent);
 }
 
 /* Button Styles */
 .btn-secondary {
-  background: linear-gradient(135deg, #f8fafc 0%, #e5e7eb 100%);
-  border: 1px solid rgba(229, 231, 235, 0.8);
-  color: #6b7280;
-  padding: 0.75rem 1.5rem;
-  border-radius: 10px;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  color: #374151;
+  padding: 0.625rem 1.25rem;
+  border-radius: 8px;
   font-weight: 600;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  position: relative;
-  overflow: hidden;
   font-size: 0.875rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  min-height: 44px;
-}
-
-.btn-secondary::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(107, 114, 128, 0.1), transparent);
-  transition: left 0.6s ease;
-}
-
-.btn-secondary:hover::before {
-  left: 100%;
+  min-height: 40px;
 }
 
 .btn-secondary:hover {
-  background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
-  color: #374151;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  background: #e5e7eb;
+  border-color: #9ca3af;
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-  border: 1px solid rgba(30, 60, 114, 0.8);
+  background: #1e3c72;
+  border: 1px solid #1e3c72;
   color: #ffffff;
-  padding: 0.75rem 1.5rem;
-  border-radius: 10px;
+  padding: 0.625rem 1.25rem;
+  border-radius: 8px;
   font-weight: 600;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
   cursor: pointer;
-  box-shadow: 0 4px 15px rgba(30, 60, 114, 0.3);
-  position: relative;
-  overflow: hidden;
   font-size: 0.875rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  min-height: 44px;
-}
-
-.btn-primary::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.6s ease;
-}
-
-.btn-primary:hover::before {
-  left: 100%;
+  min-height: 40px;
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 6px 25px rgba(30, 60, 114, 0.4);
+  background: #2a5298;
+  border-color: #2a5298;
 }
 
 .btn-danger {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-  border: 1px solid rgba(220, 38, 38, 0.8);
+  background: #dc2626;
+  border: 1px solid #dc2626;
   color: #ffffff;
-  padding: 0.75rem 1.5rem;
-  border-radius: 10px;
+  padding: 0.625rem 1.25rem;
+  border-radius: 8px;
   font-weight: 600;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
   cursor: pointer;
-  box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
-  position: relative;
-  overflow: hidden;
   font-size: 0.875rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  min-height: 44px;
-}
-
-.btn-danger::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.6s ease;
-}
-
-.btn-danger:hover::before {
-  left: 100%;
+  min-height: 40px;
 }
 
 .btn-danger:hover {
-  background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 6px 25px rgba(220, 38, 38, 0.4);
+  background: #b91c1c;
+  border-color: #b91c1c;
 }
 
 /* Button States */
@@ -455,15 +303,13 @@
 .btn-danger:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  transform: none !important;
-  box-shadow: none !important;
   pointer-events: none;
 }
 
 .btn-primary:active,
 .btn-secondary:active,
 .btn-danger:active {
-  transform: translateY(0) scale(0.98);
+  transform: scale(0.98);
 }
 
 /* Loading Buttons */
@@ -492,7 +338,7 @@
 }
 
 .btn-secondary.btn-loading::after {
-  border-top-color: #6b7280;
+  border-top-color: #374151;
 }
 
 .btn-danger.btn-loading::after {
@@ -574,10 +420,9 @@
   color: #1f2937;
   font-size: 0.95rem;
   padding: 0.75rem 1rem;
-  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
-  border: 1px solid rgba(229, 231, 235, 0.8);
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .info-item .capitalize {
@@ -594,48 +439,30 @@
   text-transform: capitalize;
   text-align: center;
   border: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  position: relative;
-  overflow: hidden;
-}
-
-.status-badge::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.6s ease;
-}
-
-.status-badge:hover::before {
-  left: 100%;
 }
 
 .status-badge.active {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: #10b981;
   color: #ffffff;
 }
 
 .status-badge.low_stock {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  background: #f59e0b;
   color: #ffffff;
 }
 
 .status-badge.out_of_stock {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  background: #ef4444;
   color: #ffffff;
 }
 
 .status-badge.expired {
-  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  background: #8b5cf6;
   color: #ffffff;
 }
 
 .status-badge.discontinued {
-  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+  background: #6b7280;
   color: #ffffff;
 }
 
@@ -646,6 +473,14 @@ body.modal-open {
   width: 100%;
   height: 100vh;
   height: 100dvh; /* Dynamic viewport height for mobile */
+  /* Prevent touch scrolling */
+  touch-action: none;
+  /* Prevent overscroll behavior */
+  overscroll-behavior: none;
+  /* Lock body at current scroll position */
+  top: 0;
+  left: 0;
+  right: 0;
 }
 
 /* iOS Safari specific fixes */
@@ -655,6 +490,8 @@ body.modal-open {
     width: 100%;
     top: 0;
     left: 0;
+    /* Disable elastic scrolling */
+    -webkit-overflow-scrolling: auto;
   }
 }
 
@@ -680,21 +517,29 @@ body.modal-open {
 
 @media (max-width: 768px) {
   .modal-overlay {
-    padding: 0.5rem;
-    align-items: flex-start;
-    padding-top: 0.5rem;
+    padding: 2vh 2vw;
+    align-items: center;
+    justify-content: center;
     height: 100vh;
     height: 100dvh; /* Dynamic viewport height for mobile */
     overflow: hidden;
+    /* Strict scroll prevention on overlay */
+    overflow-y: hidden;
+    overscroll-behavior-y: none;
+    /* Auto-scroll modal into view */
+    scroll-behavior: smooth;
   }
 
   .modal-content {
+    width: 96vw;
     max-width: 100%;
-    max-height: calc(100vh - 1rem);
-    max-height: calc(100dvh - 1rem); /* Dynamic viewport height for mobile */
-    border-radius: 16px;
+    max-height: 96vh;
+    max-height: 96dvh; /* Dynamic viewport height for mobile */
+    border-radius: 12px;
     margin: 0;
     overflow: hidden;
+    /* Centered responsive modal */
+    position: relative;
   }
 
   .modal-content.modal-fullscreen {
@@ -739,6 +584,7 @@ body.modal-open {
     width: 100%;
     justify-content: center;
     padding: 1rem 1.5rem;
+    min-height: 48px;
   }
 
   .form-grid {
@@ -758,19 +604,57 @@ body.modal-open {
   }
 }
 
+@media (max-width: 640px) {
+  .modal-overlay {
+    padding: 1.5vh 1.5vw;
+  }
+
+  .modal-content {
+    width: 97vw;
+    max-width: 100%;
+    max-height: 97vh;
+    max-height: 97dvh;
+    border-radius: 10px;
+  }
+
+  .modal-header {
+    padding: 1.25rem 1.25rem 0.875rem;
+  }
+
+  .modal-title {
+    font-size: 1.1875rem;
+  }
+
+  .modal-body {
+    padding: 1.25rem;
+  }
+
+  .modal-footer {
+    padding: 0.875rem 1.25rem 1.25rem;
+  }
+
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger {
+    padding: 0.9375rem 1.25rem;
+    font-size: 0.875rem;
+  }
+}
+
 @media (max-width: 480px) {
   .modal-overlay {
-    padding: 0.25rem;
-    padding-top: 0.25rem;
+    padding: 1vh 1vw;
     height: 100vh;
     height: 100dvh; /* Dynamic viewport height for mobile */
     overflow: hidden;
   }
 
   .modal-content {
-    border-radius: 12px;
-    max-height: calc(100vh - 0.5rem);
-    max-height: calc(100dvh - 0.5rem); /* Dynamic viewport height for mobile */
+    width: 98vw;
+    max-width: 100%;
+    max-height: 98vh;
+    max-height: 98dvh; /* Dynamic viewport height for mobile */
+    border-radius: 8px;
     overflow: hidden;
   }
 
@@ -811,22 +695,101 @@ body.modal-open {
   .btn-danger {
     padding: 0.875rem 1rem;
     font-size: 0.875rem;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 420px) {
+  .modal-overlay {
+    padding: 1vh 1vw;
+  }
+
+  .modal-content {
+    width: 98vw;
+    max-width: 100%;
+    max-height: 98vh;
+    max-height: 98dvh;
+    border-radius: 8px;
+  }
+
+  .modal-header {
+    padding: 0.9375rem;
+  }
+
+  .modal-title {
+    font-size: 1.0625rem;
+  }
+
+  .modal-body {
+    padding: 0.9375rem;
+  }
+
+  .modal-footer {
+    padding: 0.9375rem;
+  }
+
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger {
+    padding: 0.8125rem 0.9375rem;
+    font-size: 0.8125rem;
+  }
+}
+
+@media (max-width: 375px) {
+  .modal-overlay {
+    padding: 0.75vh 0.75vw;
+  }
+
+  .modal-content {
+    width: 98.5vw;
+    max-width: 100%;
+    max-height: 98.5vh;
+    max-height: 98.5dvh;
+    border-radius: 6px;
+  }
+
+  .modal-header {
+    padding: 0.875rem;
+  }
+
+  .modal-title {
+    font-size: 1.03125rem;
+  }
+
+  .modal-body {
+    padding: 0.875rem;
+  }
+
+  .modal-footer {
+    padding: 0.875rem;
+  }
+
+  .form-group {
+    margin-bottom: 0.875rem;
+  }
+
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger {
+    padding: 0.75rem 0.875rem;
   }
 }
 
 @media (max-width: 360px) {
   .modal-overlay {
-    padding: 0.125rem;
-    padding-top: 0.125rem;
+    padding: 0.5vh 0.5vw;
     height: 100vh;
     height: 100dvh; /* Dynamic viewport height for mobile */
     overflow: hidden;
   }
 
   .modal-content {
-    border-radius: 8px;
-    max-height: calc(100vh - 0.25rem);
-    max-height: calc(100dvh - 0.25rem); /* Dynamic viewport height for mobile */
+    width: 99vw;
+    max-width: 100%;
+    max-height: 99vh;
+    max-height: 99dvh; /* Dynamic viewport height for mobile */
+    border-radius: 6px;
     overflow: hidden;
   }
 
@@ -877,16 +840,6 @@ body.modal-open {
     min-width: 44px;
   }
 
-  .modal-close-btn:active {
-    transform: scale(0.95);
-  }
-
-  .btn-primary:active,
-  .btn-secondary:active,
-  .btn-danger:active {
-    transform: scale(0.98);
-  }
-
   /* Better scrolling on mobile */
   .modal-body {
     -webkit-overflow-scrolling: touch;
@@ -899,97 +852,133 @@ body.modal-open {
   .form-group select {
     min-height: 44px;
   }
+
+  /* Prevent elastic scrolling outside modal */
+  .modal-overlay {
+    overscroll-behavior: none;
+    touch-action: none;
+  }
+
+  /* Allow scrolling only in modal body */
+  .modal-content {
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+  }
+
+  /* Ensure modal scrolls to top when opened */
+  .modal-body {
+    scroll-snap-type: y proximity;
+    overscroll-behavior: contain;
+  }
+}
+
+/* Mobile Modal Auto-Scroll & Scroll Lock Enhancement */
+@media (max-width: 768px) {
+  /* Ensure modal is in viewport when opened */
+  .modal-content {
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+
+  /* Lock modal position and prevent background scroll */
+  .modal-overlay {
+    position: fixed;
+    overflow: hidden !important;
+    -webkit-overflow-scrolling: auto;
+  }
+
+  /* Only modal body should scroll */
+  .modal-header,
+  .modal-footer {
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Ensure smooth modal body scrolling */
+  .modal-body {
+    position: relative;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent address bar from showing/hiding on scroll */
+  .modal-overlay {
+    min-height: 100dvh;
+  }
 }
 
 /* Landscape Orientation Adjustments */
 @media (max-width: 768px) and (orientation: landscape) {
   .modal-overlay {
-    padding: 0.25rem;
-    align-items: flex-start;
+    padding: 1vh 2vw;
+    align-items: center;
+    justify-content: center;
     height: 100vh;
     height: 100dvh; /* Dynamic viewport height for mobile */
     overflow: hidden;
   }
 
   .modal-content {
-    max-height: 95vh;
-    max-height: 95dvh; /* Dynamic viewport height for mobile */
+    width: 96vw;
+    max-width: 100%;
+    max-height: 98vh;
+    max-height: 98dvh; /* Dynamic viewport height for mobile */
+    border-radius: 10px;
     overflow: hidden;
   }
 
   .modal-header {
-    padding: 1rem 1.5rem 0.75rem;
+    padding: 0.75rem 1rem;
   }
 
   .modal-body {
-    padding: 1rem 1.5rem;
+    padding: 0.75rem 1rem;
   }
 
   .modal-footer {
-    padding: 0.75rem 1.5rem 1rem;
+    padding: 0.625rem 1rem 0.75rem;
   }
 }
 
 /* Safe Area Support for Modern Mobile Devices */
 @supports (padding: max(0px)) {
   @media (max-width: 768px) {
+    /* Apply safe area insets to overlay padding */
     .modal-overlay {
-      padding-left: max(0.5rem, env(safe-area-inset-left));
-      padding-right: max(0.5rem, env(safe-area-inset-right));
-      padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+      padding-top: max(2vh, env(safe-area-inset-top));
+      padding-left: max(2vw, env(safe-area-inset-left));
+      padding-right: max(2vw, env(safe-area-inset-right));
+      padding-bottom: max(2vh, env(safe-area-inset-bottom));
     }
   }
 
   @media (max-width: 480px) {
     .modal-overlay {
-      padding-left: max(0.25rem, env(safe-area-inset-left));
-      padding-right: max(0.25rem, env(safe-area-inset-right));
-      padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
+      padding-top: max(1vh, env(safe-area-inset-top));
+      padding-left: max(1vw, env(safe-area-inset-left));
+      padding-right: max(1vw, env(safe-area-inset-right));
+      padding-bottom: max(1vh, env(safe-area-inset-bottom));
+    }
+  }
+
+  @media (max-width: 360px) {
+    .modal-overlay {
+      padding-top: max(0.5vh, env(safe-area-inset-top));
+      padding-left: max(0.5vw, env(safe-area-inset-left));
+      padding-right: max(0.5vw, env(safe-area-inset-right));
+      padding-bottom: max(0.5vh, env(safe-area-inset-bottom));
     }
   }
 }
 
 /* Reduced Motion Support */
 @media (prefers-reduced-motion: reduce) {
-  .modal-overlay,
-  .modal-content,
-  .modal-close-btn,
-  .btn-primary,
-  .btn-secondary,
-  .btn-danger,
-  .form-group input,
-  .form-group textarea,
-  .form-group select,
-  .status-badge {
-    animation: none;
-    transition: none;
-  }
-
-  .modal-close-btn:hover,
-  .btn-primary:hover,
-  .btn-secondary:hover,
-  .btn-danger:hover {
-    transform: none;
-  }
-}
-
-/* High Contrast Support */
-@media (prefers-contrast: high) {
-  .modal-content {
-    border: 2px solid #000000;
-    box-shadow: none;
-  }
-
-  .form-group input,
-  .form-group textarea,
-  .form-group select {
-    border: 2px solid #000000;
-  }
-
-  .btn-primary,
-  .btn-secondary,
-  .btn-danger {
-    border: 2px solid #000000;
+  * {
+    animation: none !important;
+    transition: none !important;
   }
 }
 

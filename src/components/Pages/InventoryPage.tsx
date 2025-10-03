@@ -386,7 +386,7 @@ const InventoryPage: React.FC = () => {
       <div className="stats-grid">
         {statCards.map((stat, index) => (
           <div key={index} className="stat-card">
-            <div className="stat-icon">
+            <div className="stat-icon-wrapper">
               {stat.icon}
             </div>
             <div className="stat-content">

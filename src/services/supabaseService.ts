@@ -854,6 +854,107 @@ export const patientMonitoringService = {
     return data;
   },
 
+  deletePatient: async (id: number): Promise<void> => {
+    // Check if patient has any consultations, vital signs, or other related records
+    const { data: consultationsData, error: consultationsError } = await supabase
+      .from('consultations')
+      .select('id')
+      .eq('patient_id', id)
+      .limit(1);
+
+    if (consultationsError) {
+      throw new Error(`Error checking consultation records: ${consultationsError.message}`);
+    }
+
+    // We'll check for vital signs indirectly through consultations
+    // since we already checked for consultations above
+
+    const { data: contactsData, error: contactsError } = await supabase
+      .from('patient_contacts')
+      .select('id')
+      .eq('patient_id', id)
+      .limit(1);
+
+    if (contactsError) {
+      throw new Error(`Error checking patient contacts: ${contactsError.message}`);
+    }
+
+    const { data: medicalHistoryData, error: medicalHistoryError } = await supabase
+      .from('medical_history')
+      .select('id')
+      .eq('patient_id', id)
+      .limit(1);
+
+    if (medicalHistoryError) {
+      throw new Error(`Error checking medical history: ${medicalHistoryError.message}`);
+    }
+
+    // If patient has related records, provide detailed warning
+    const hasRecords = (consultationsData && consultationsData.length > 0) ||
+                      (contactsData && contactsData.length > 0) ||
+                      (medicalHistoryData && medicalHistoryData.length > 0);
+
+    if (hasRecords) {
+      // Instead of preventing deletion entirely, let's delete all related records first
+      console.warn('Patient has related records, deleting them first...');
+
+      // Delete related records in the correct order (to respect foreign key constraints)
+      // 1. Delete vital signs related to patient's consultations
+      if (consultationsData && consultationsData.length > 0) {
+        for (const consultation of consultationsData) {
+          await supabase
+            .from('vital_signs')
+            .delete()
+            .eq('consultation_id', consultation.id);
+
+          await supabase
+            .from('glasgow_coma_scales')
+            .delete()
+            .eq('consultation_id', consultation.id);
+
+          await supabase
+            .from('consultation_attachments')
+            .delete()
+            .eq('consultation_id', consultation.id);
+        }
+      }
+
+      // 2. Delete consultations
+      await supabase
+        .from('consultations')
+        .delete()
+        .eq('patient_id', id);
+
+      // 3. Delete patient contacts
+      await supabase
+        .from('patient_contacts')
+        .delete()
+        .eq('patient_id', id);
+
+      // 4. Delete medical history
+      await supabase
+        .from('medical_history')
+        .delete()
+        .eq('patient_id', id);
+
+      // 5. Delete patient monitoring logs
+      await supabase
+        .from('patient_monitoring_logs')
+        .delete()
+        .eq('patient_id', id);
+    }
+
+    // Finally delete the patient
+    const { error } = await supabase
+      .from('patients')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+  },
+
   getArchivedPatients: async (): Promise<Patient[]> => {
     const { data, error } = await supabase
       .from('patients')
@@ -1018,6 +1119,15 @@ export const patientMonitoringService = {
     return data;
   },
 
+  deleteVitalSigns: async (id: number): Promise<void> => {
+    const { error } = await supabase
+      .from('vital_signs')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw new Error(error.message);
+  },
+
   // Patient contacts management
   getPatientContacts: async (patientId: number): Promise<PatientContact[]> => {
     const { data, error } = await supabase
@@ -1179,6 +1289,15 @@ export const patientMonitoringService = {
     return data;
   },
 
+  deleteGlasgowComaScale: async (id: number): Promise<void> => {
+    const { error } = await supabase
+      .from('glasgow_coma_scales')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw new Error(error.message);
+  },
+
   // Consultation attachments management
   getConsultationAttachments: async (consultationId: number): Promise<ConsultationAttachment[]> => {
     const { data, error } = await supabase
@@ -1208,13 +1327,118 @@ export const patientMonitoringService = {
     return data;
   },
 
+  uploadConsultationAttachment: async (consultationId: number, file: File, description?: string): Promise<ConsultationAttachment> => {
+    const currentUser = authService.getCurrentUser();
+
+    // Create a unique file name with timestamp
+    const timestamp = Date.now();
+    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const storagePath = `consultations/${consultationId}/${timestamp}_${sanitizedFileName}`;
+
+    try {
+      // Upload file to Supabase storage
+      const { error: uploadError } = await supabase.storage
+        .from('consultation-attachments')
+        .upload(storagePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL for the uploaded file
+      const { data: { publicUrl } } = supabase.storage
+        .from('consultation-attachments')
+        .getPublicUrl(storagePath);
+
+      // Create database record
+      const attachmentData = {
+        consultation_id: consultationId,
+        file_name: file.name,
+        file_path: publicUrl,
+        file_type: file.type,
+        file_size: file.size,
+        description: description || undefined,
+        uploaded_by: currentUser?.id
+      };
+
+      const { data, error } = await supabase
+        .from('consultation_attachments')
+        .insert([{
+          ...attachmentData,
+          uploaded_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error: any) {
+      throw new Error(`Failed to upload attachment: ${error.message}`);
+    }
+  },
+
   deleteConsultationAttachment: async (id: number): Promise<void> => {
+    // Get attachment details first to delete from storage
+    const { data: attachment, error: fetchError } = await supabase
+      .from('consultation_attachments')
+      .select('file_path')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) throw new Error(fetchError.message);
+
+    if (attachment?.file_path) {
+      // Extract storage path from URL
+      const url = new URL(attachment.file_path);
+      const pathParts = url.pathname.split('/');
+      const storagePath = pathParts.slice(pathParts.indexOf('consultation-attachments') + 1).join('/');
+
+      // Delete from storage (don't throw error if file doesn't exist)
+      try {
+        await supabase.storage
+          .from('consultation-attachments')
+          .remove([storagePath]);
+      } catch (storageError) {
+        console.warn('Storage deletion warning:', storageError);
+      }
+    }
+
+    // Delete database record
     const { error } = await supabase
       .from('consultation_attachments')
       .delete()
       .eq('id', id);
 
     if (error) throw new Error(error.message);
+  },
+
+  downloadConsultationAttachment: async (filePath: string, fileName: string): Promise<void> => {
+    try {
+      // Extract storage path from URL
+      const url = new URL(filePath);
+      const pathParts = url.pathname.split('/');
+      const storagePath = pathParts.slice(pathParts.indexOf('consultation-attachments') + 1).join('/');
+
+      // Download file from storage
+      const { data, error } = await supabase.storage
+        .from('consultation-attachments')
+        .download(storagePath);
+
+      if (error) throw error;
+
+      // Create download link
+      const downloadUrl = window.URL.createObjectURL(data);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error: any) {
+      throw new Error(`Failed to download attachment: ${error.message}`);
+    }
   },
 
   // Patient monitoring logs management
@@ -1419,12 +1643,15 @@ export const userService = {
   },
 
   createUser: async (userData: any): Promise<any> => {
-    // Hash password if provided
-    const processedData = { ...userData };
-    if (processedData.password) {
-      processedData.password_hash = await hashPassword(processedData.password);
-      delete processedData.password; // Remove plain text password
+    // Validate password is provided
+    if (!userData.password || !userData.password.trim()) {
+      throw new Error('Password is required');
     }
+
+    // Hash password
+    const processedData = { ...userData };
+    processedData.password_hash = await hashPassword(processedData.password);
+    // Keep plain text password for compatibility
 
     const { data, error } = await supabase
       .from('users')
@@ -1445,9 +1672,9 @@ export const userService = {
   updateUser: async (userId: number, userData: any): Promise<any> => {
     // Hash password if provided
     const processedData = { ...userData };
-    if (processedData.password) {
+    if (processedData.password && processedData.password.trim()) {
       processedData.password_hash = await hashPassword(processedData.password);
-      delete processedData.password; // Remove plain text password
+      // Keep plain text password for compatibility
     }
 
     const { data, error } = await supabase
@@ -1468,6 +1695,37 @@ export const userService = {
   },
 
   deleteUser: async (userId: number): Promise<void> => {
+    // Check if user has created any patients, consultations, or other records
+    const { data: patientsData, error: patientsError } = await supabase
+      .from('patients')
+      .select('id')
+      .eq('created_by', userId)
+      .limit(1);
+
+    if (patientsError) {
+      throw new Error(`Error checking patient records: ${patientsError.message}`);
+    }
+
+    const { data: consultationsData, error: consultationsError } = await supabase
+      .from('consultations')
+      .select('id')
+      .eq('created_by', userId)
+      .limit(1);
+
+    if (consultationsError) {
+      throw new Error(`Error checking consultation records: ${consultationsError.message}`);
+    }
+
+    // If user has created records, prevent deletion
+    if (patientsData && patientsData.length > 0) {
+      throw new Error('Cannot delete user: This user has created patient records. For data integrity, users who have created medical records cannot be deleted.');
+    }
+
+    if (consultationsData && consultationsData.length > 0) {
+      throw new Error('Cannot delete user: This user has created consultation records. For data integrity, users who have created medical records cannot be deleted.');
+    }
+
+    // If no records found, proceed with deletion
     const { error } = await supabase
       .from('users')
       .delete()

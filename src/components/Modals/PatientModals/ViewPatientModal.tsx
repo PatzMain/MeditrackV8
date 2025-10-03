@@ -5,11 +5,11 @@ import {
   type Patient,
   type PatientContact,
   type MedicalHistory,
-  type Consultation
+  type Consultation,
+  type PatientMonitoringLog
 } from '../../../services/supabaseService';
 import PatientContactModal from './PatientContactModal';
 import MedicalHistoryModal from './MedicalHistoryModal';
-import PatientMonitoringLogsModal from './PatientMonitoringLogsModal';
 import './PatientModals.css';
 
 interface ViewPatientModalProps {
@@ -31,13 +31,19 @@ const ViewPatientModal: React.FC<ViewPatientModalProps> = ({
   const [contacts, setContacts] = useState<PatientContact[]>([]);
   const [medicalHistory, setMedicalHistory] = useState<MedicalHistory | null>(null);
   const [consultations, setConsultations] = useState<Consultation[]>([]);
+  const [logs, setLogs] = useState<PatientMonitoringLog[]>([]);
   const [activeTab, setActiveTab] = useState('profile');
 
   // Modal states
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<PatientContact | null>(null);
   const [medicalHistoryModalOpen, setMedicalHistoryModalOpen] = useState(false);
-  const [logsModalOpen, setLogsModalOpen] = useState(false);
+
+  // Logs state
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsError, setLogsError] = useState<string | null>(null);
+  const [logsFilter, setLogsFilter] = useState<'all' | 'patient' | 'consultation'>('all');
+  const [logsLimit, setLogsLimit] = useState(50);
 
   const fetchPatientDetails = useCallback(async () => {
     if (!patient) return;
@@ -174,8 +180,165 @@ const ViewPatientModal: React.FC<ViewPatientModalProps> = ({
     setMedicalHistory(history);
   };
 
-  const handleViewLogs = () => {
-    setLogsModalOpen(true);
+  const fetchLogs = useCallback(async () => {
+    if (!patient) return;
+
+    try {
+      setLogsLoading(true);
+      setLogsError(null);
+
+      let logsData: PatientMonitoringLog[];
+
+      if (logsFilter === 'patient') {
+        logsData = await patientMonitoringService.getPatientMonitoringLogs(patient.id, undefined, logsLimit);
+      } else if (logsFilter === 'consultation') {
+        logsData = await patientMonitoringService.getPatientMonitoringLogs(undefined, undefined, logsLimit);
+        logsData = logsData.filter(log =>
+          log.patient_id === patient.id ||
+          (log.details && typeof log.details === 'object' && 'patient_id' in log.details && log.details.patient_id === patient.id)
+        );
+      } else {
+        logsData = await patientMonitoringService.getPatientMonitoringLogs(patient.id, undefined, logsLimit);
+      }
+
+      setLogs(logsData);
+    } catch (error: any) {
+      console.error('Error fetching logs:', error);
+      setLogsError(`Failed to load monitoring logs: ${error.message}`);
+    } finally {
+      setLogsLoading(false);
+    }
+  }, [patient, logsFilter, logsLimit]);
+
+  useEffect(() => {
+    if (patient && isOpen && activeTab === 'logs') {
+      fetchLogs();
+    }
+  }, [patient, isOpen, activeTab, fetchLogs]);
+
+  const formatLogDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.abs(now.getTime() - date.getTime()) / (1000 * 60 * 60);
+
+    if (diffInHours < 24) {
+      return date.toLocaleString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    } else if (diffInHours < 24 * 7) {
+      return date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    } else {
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    }
+  };
+
+  const getActivityIcon = (action: string) => {
+    const iconProps = {
+      width: 16,
+      height: 16,
+      viewBox: "0 0 24 24",
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: 2
+    };
+
+    if (action.includes('create') || action.includes('add') || action.includes('start')) {
+      return (
+        <svg {...iconProps} className="activity-icon create">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+      );
+    }
+
+    if (action.includes('update') || action.includes('edit') || action.includes('record')) {
+      return (
+        <svg {...iconProps} className="activity-icon update">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="m18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/>
+        </svg>
+      );
+    }
+
+    if (action.includes('delete') || action.includes('remove')) {
+      return (
+        <svg {...iconProps} className="activity-icon delete">
+          <polyline points="3,6 5,6 21,6"/>
+          <path d="m19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1 2-2h4a2,2 0 0,1 2,2v2"/>
+        </svg>
+      );
+    }
+
+    if (action.includes('view') || action.includes('access')) {
+      return (
+        <svg {...iconProps} className="activity-icon view">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      );
+    }
+
+    if (action.includes('upload') || action.includes('attach')) {
+      return (
+        <svg {...iconProps} className="activity-icon upload">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17,8 12,3 7,8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+      );
+    }
+
+    if (action.includes('complete') || action.includes('finish')) {
+      return (
+        <svg {...iconProps} className="activity-icon complete">
+          <path d="M9 12l2 2 4-4"/>
+          <circle cx="12" cy="12" r="10"/>
+        </svg>
+      );
+    }
+
+    return (
+      <svg {...iconProps} className="activity-icon default">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M12 6v6l4 2"/>
+      </svg>
+    );
+  };
+
+  const getActivityColor = (action: string) => {
+    if (action.includes('create') || action.includes('add') || action.includes('start')) {
+      return 'var(--color-success)';
+    }
+    if (action.includes('update') || action.includes('edit') || action.includes('record')) {
+      return 'var(--color-warning)';
+    }
+    if (action.includes('delete') || action.includes('remove')) {
+      return 'var(--color-error)';
+    }
+    if (action.includes('complete') || action.includes('finish')) {
+      return 'var(--color-success)';
+    }
+    return 'var(--color-primary)';
+  };
+
+  const formatActionText = (action: string) => {
+    return action
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   };
 
   if (!isOpen || !patient) return null;
@@ -184,6 +347,12 @@ const ViewPatientModal: React.FC<ViewPatientModalProps> = ({
     <div className="modal-overlay">
       <div className="modal-content large-modal">
         <div className="modal-header">
+          <div className="patient-avatar">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </div>
           <div className="patient-header-info">
             <h2>{patient.first_name} {patient.middle_name ? `${patient.middle_name} ` : ''}{patient.last_name}</h2>
             <div className="patient-header-details">
@@ -263,67 +432,67 @@ const ViewPatientModal: React.FC<ViewPatientModalProps> = ({
               {/* Profile Tab */}
               {activeTab === 'profile' && (
                 <div className="patient-profile">
-                  <div className="profile-section">
-                    <h3>Personal Information</h3>
-                    <div className="profile-item">
-                      <span className="profile-label">Full Name:</span>
-                      <span className="profile-value">
+                  <div className="medical-section">
+                    <h4>Personal Information</h4>
+                    <div className="allergy-item">
+                      <span className="allergy-label">Full Name</span>
+                      <span className="allergy-value">
                         {patient.first_name} {patient.middle_name ? `${patient.middle_name} ` : ''}{patient.last_name}
                       </span>
                     </div>
-                    <div className="profile-item">
-                      <span className="profile-label">Age:</span>
-                      <span className="profile-value">
+                    <div className="allergy-item">
+                      <span className="allergy-label">Age</span>
+                      <span className="allergy-value">
                         {patient.birthday ? `${calculateAge(patient.birthday)} years old` : (patient.age || 'Not provided')}
                       </span>
                     </div>
-                    <div className="profile-item">
-                      <span className="profile-label">Sex:</span>
-                      <span className="profile-value">{patient.sex || 'Not provided'}</span>
+                    <div className="allergy-item">
+                      <span className="allergy-label">Sex</span>
+                      <span className="allergy-value">{patient.sex || 'Not provided'}</span>
                     </div>
-                    <div className="profile-item">
-                      <span className="profile-label">Civil Status:</span>
-                      <span className="profile-value">{patient.civil_status || 'Not provided'}</span>
+                    <div className="allergy-item">
+                      <span className="allergy-label">Civil Status</span>
+                      <span className="allergy-value">{patient.civil_status || 'Not provided'}</span>
                     </div>
-                    <div className="profile-item">
-                      <span className="profile-label">Birthday:</span>
-                      <span className="profile-value">{formatDate(patient.birthday)}</span>
+                    <div className="allergy-item">
+                      <span className="allergy-label">Birthday</span>
+                      <span className="allergy-value">{formatDate(patient.birthday)}</span>
                     </div>
-                    <div className="profile-item">
-                      <span className="profile-label">Address:</span>
-                      <span className="profile-value">{patient.address || 'Not provided'}</span>
+                    <div className="allergy-item">
+                      <span className="allergy-label">Address</span>
+                      <span className="allergy-value">{patient.address || 'Not provided'}</span>
                     </div>
                   </div>
 
-                  <div className="profile-section">
-                    <h3>Patient Classification</h3>
-                    <div className="profile-item">
-                      <span className="profile-label">Type:</span>
-                      <span className="profile-value">{patient.patient_type}</span>
+                  <div className="medical-section">
+                    <h4>Patient Classification</h4>
+                    <div className="allergy-item">
+                      <span className="allergy-label">Type</span>
+                      <span className="allergy-value">{patient.patient_type}</span>
                     </div>
                     {patient.course && (
-                      <div className="profile-item">
-                        <span className="profile-label">Course:</span>
-                        <span className="profile-value">{patient.course}</span>
+                      <div className="allergy-item">
+                        <span className="allergy-label">Course</span>
+                        <span className="allergy-value">{patient.course}</span>
                       </div>
                     )}
                     {patient.department && (
-                      <div className="profile-item">
-                        <span className="profile-label">Department:</span>
-                        <span className="profile-value">{patient.department}</span>
+                      <div className="allergy-item">
+                        <span className="allergy-label">Department</span>
+                        <span className="allergy-value">{patient.department}</span>
                       </div>
                     )}
                     {patient.patient_type === 'Student' && (
                       <>
-                        <div className="profile-item">
-                          <span className="profile-label">Level:</span>
-                          <span className="profile-value">
+                        <div className="allergy-item">
+                          <span className="allergy-label">Level</span>
+                          <span className="allergy-value">
                             {patient.student_level ? patient.student_level.charAt(0).toUpperCase() + patient.student_level.slice(1) : 'Not provided'}
                           </span>
                         </div>
-                        <div className="profile-item">
-                          <span className="profile-label">Year/Grade:</span>
-                          <span className="profile-value">
+                        <div className="allergy-item">
+                          <span className="allergy-label">Year/Grade</span>
+                          <span className="allergy-value">
                             {patient.year_level ?
                               (patient.student_level === 'highschool' ? `Grade ${patient.year_level}` : `Year ${patient.year_level}`)
                               : 'Not provided'
@@ -334,39 +503,39 @@ const ViewPatientModal: React.FC<ViewPatientModalProps> = ({
                     )}
                   </div>
 
-                  <div className="profile-section">
-                    <h3>Contact Information</h3>
-                    <div className="profile-item">
-                      <span className="profile-label">Phone:</span>
-                      <span className="profile-value">{patient.phone || 'Not provided'}</span>
+                  <div className="medical-section">
+                    <h4>Contact Information</h4>
+                    <div className="allergy-item">
+                      <span className="allergy-label">Phone</span>
+                      <span className="allergy-value">{patient.phone || 'Not provided'}</span>
                     </div>
-                    <div className="profile-item">
-                      <span className="profile-label">Email:</span>
-                      <span className="profile-value">{patient.email || 'Not provided'}</span>
+                    <div className="allergy-item">
+                      <span className="allergy-label">Email</span>
+                      <span className="allergy-value">{patient.email || 'Not provided'}</span>
                     </div>
                   </div>
 
-                  <div className="profile-section">
-                    <h3>System Information</h3>
-                    <div className="profile-item">
-                      <span className="profile-label">Patient ID:</span>
-                      <span className="profile-value">{patient.patient_id}</span>
+                  <div className="medical-section">
+                    <h4>System Information</h4>
+                    <div className="allergy-item">
+                      <span className="allergy-label">Patient ID</span>
+                      <span className="allergy-value">{patient.patient_id}</span>
                     </div>
-                    <div className="profile-item">
-                      <span className="profile-label">Status:</span>
-                      <span className="profile-value">
+                    <div className="allergy-item">
+                      <span className="allergy-label">Status</span>
+                      <span className="allergy-value">
                         <span className={`status-badge ${patient.status}`}>
                           {patient.status}
                         </span>
                       </span>
                     </div>
-                    <div className="profile-item">
-                      <span className="profile-label">Created:</span>
-                      <span className="profile-value">{formatDateTime(patient.created_at)}</span>
+                    <div className="allergy-item">
+                      <span className="allergy-label">Created</span>
+                      <span className="allergy-value">{formatDateTime(patient.created_at)}</span>
                     </div>
-                    <div className="profile-item">
-                      <span className="profile-label">Last Updated:</span>
-                      <span className="profile-value">{formatDateTime(patient.updated_at)}</span>
+                    <div className="allergy-item">
+                      <span className="allergy-label">Last Updated</span>
+                      <span className="allergy-value">{formatDateTime(patient.updated_at)}</span>
                     </div>
                   </div>
                 </div>
@@ -588,13 +757,6 @@ const ViewPatientModal: React.FC<ViewPatientModalProps> = ({
                 <div className="consultations-section">
                   <div className="section-header">
                     <h3>Consultation History</h3>
-                    <button className="btn-primary" onClick={handleNewConsultation}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <line x1="12" y1="5" x2="12" y2="19"/>
-                        <line x1="5" y1="12" x2="19" y2="12"/>
-                      </svg>
-                      New Consultation
-                    </button>
                   </div>
 
                   {consultations.length === 0 ? (
@@ -652,55 +814,115 @@ const ViewPatientModal: React.FC<ViewPatientModalProps> = ({
               {/* Activity Logs Tab */}
               {activeTab === 'logs' && (
                 <div className="logs-section">
-                  <div className="section-header">
-                    <h3>Activity Logs</h3>
-                    <button className="btn-secondary" onClick={handleViewLogs}>
+                  {logsError && (
+                    <div className="error-message">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                        <polyline points="22,6 12,13 2,6"/>
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="15" y1="9" x2="9" y2="15"/>
+                        <line x1="9" y1="9" x2="15" y2="15"/>
                       </svg>
-                      View Detailed Logs
+                      {logsError}
+                    </div>
+                  )}
+
+                  <div className="logs-filters">
+                    <div className="filter-group">
+                      <label>Filter by:</label>
+                      <select
+                        value={logsFilter}
+                        onChange={(e) => setLogsFilter(e.target.value as 'all' | 'patient' | 'consultation')}
+                      >
+                        <option value="all">All Activities</option>
+                        <option value="patient">Patient Activities</option>
+                        <option value="consultation">Consultation Activities</option>
+                      </select>
+                    </div>
+
+                    <div className="filter-group">
+                      <label>Show:</label>
+                      <select
+                        value={logsLimit}
+                        onChange={(e) => setLogsLimit(parseInt(e.target.value))}
+                      >
+                        <option value={25}>Last 25 activities</option>
+                        <option value={50}>Last 50 activities</option>
+                        <option value={100}>Last 100 activities</option>
+                        <option value={200}>Last 200 activities</option>
+                      </select>
+                    </div>
+
+                    <button
+                      className="btn-secondary btn-sm"
+                      onClick={fetchLogs}
+                      disabled={logsLoading}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="1,4 1,10 7,10"/>
+                        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                      </svg>
+                      Refresh
                     </button>
                   </div>
 
-                  <div className="logs-preview">
-                    <p>
-                      View detailed activity logs including patient record updates, consultations,
-                      contact modifications, and medical history changes for comprehensive tracking.
-                    </p>
-                    <div className="logs-features">
-                      <div className="feature-item">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <circle cx="12" cy="12" r="10"/>
-                          <path d="M12 6v6l4 2"/>
-                        </svg>
-                        <span>Timestamped activities</span>
-                      </div>
-                      <div className="feature-item">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                          <circle cx="12" cy="7" r="4"/>
-                        </svg>
-                        <span>User attribution</span>
-                      </div>
-                      <div className="feature-item">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                          <polyline points="14,2 14,8 20,8"/>
-                        </svg>
-                        <span>Detailed activity descriptions</span>
-                      </div>
-                      <div className="feature-item">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/>
-                        </svg>
-                        <span>Filterable by activity type</span>
-                      </div>
+                  {logsLoading ? (
+                    <div className="loading-message">Loading monitoring logs...</div>
+                  ) : logs.length === 0 ? (
+                    <div className="empty-state">
+                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 6v6l4 2"/>
+                      </svg>
+                      <p>No monitoring logs found for this patient</p>
                     </div>
-                    <button className="btn-primary" onClick={handleViewLogs}>
-                      Open Activity Log Viewer
-                    </button>
-                  </div>
+                  ) : (
+                    <div className="logs-timeline">
+                      {logs.map((log, index) => (
+                        <div key={log.id} className="log-entry">
+                          <div className="log-icon" style={{ color: getActivityColor(log.action) }}>
+                            {getActivityIcon(log.action)}
+                          </div>
+
+                          <div className="log-content">
+                            <div className="log-header">
+                              <div className="log-action">
+                                {formatActionText(log.action)}
+                              </div>
+                              <div className="log-time">
+                                {formatLogDateTime(log.performed_at)}
+                              </div>
+                            </div>
+
+                            <div className="log-description">
+                              {log.description}
+                            </div>
+
+                            {log.details && Object.keys(log.details).length > 0 && (
+                              <div className="log-details">
+                                <button
+                                  className="details-toggle"
+                                  onClick={(e) => {
+                                    const target = e.currentTarget;
+                                    const details = target.nextElementSibling as HTMLElement;
+                                    if (details) {
+                                      details.style.display = details.style.display === 'none' ? 'block' : 'none';
+                                      target.textContent = details.style.display === 'none' ? 'Show details' : 'Hide details';
+                                    }
+                                  }}
+                                >
+                                  Show details
+                                </button>
+                                <div className="details-content" style={{ display: 'none' }}>
+                                  <pre>{JSON.stringify(log.details, null, 2)}</pre>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {index < logs.length - 1 && <div className="log-connector" />}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </>
@@ -720,12 +942,6 @@ const ViewPatientModal: React.FC<ViewPatientModalProps> = ({
                 <path d="m18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/>
               </svg>
               Edit Patient
-            </button>
-            <button className="btn-primary" onClick={handleNewConsultation}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-              </svg>
-              New Consultation
             </button>
           </div>
         </div>
@@ -749,12 +965,6 @@ const ViewPatientModal: React.FC<ViewPatientModalProps> = ({
         medicalHistory={medicalHistory}
         onClose={() => setMedicalHistoryModalOpen(false)}
         onMedicalHistorySaved={handleMedicalHistorySaved}
-      />
-
-      <PatientMonitoringLogsModal
-        isOpen={logsModalOpen}
-        patient={patient}
-        onClose={() => setLogsModalOpen(false)}
       />
     </div>
   );

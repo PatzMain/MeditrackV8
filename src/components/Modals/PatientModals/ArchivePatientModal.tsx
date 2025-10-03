@@ -74,10 +74,17 @@ const ArchivePatientModal: React.FC<ArchivePatientModalProps> = ({
 
   if (!isOpen || !patient) return null;
 
+  // Generate patient initials for avatar
+  const getInitials = () => {
+    const firstInitial = patient.first_name?.charAt(0).toUpperCase() || '';
+    const lastInitial = patient.last_name?.charAt(0).toUpperCase() || '';
+    return `${firstInitial}${lastInitial}`;
+  };
+
   return (
-    <div className="modal-overlay">
-      <div className="modal-container">
-        <div className="modal-header">
+    <div className="modal-overlay archive-overlay">
+      <div className="modal-container archive-modal">
+        <div className="modal-header archive-header">
           <div className="modal-title-section">
             <h2 className="modal-title">Archive Patient</h2>
             <p className="modal-subtitle">
@@ -94,7 +101,7 @@ const ArchivePatientModal: React.FC<ArchivePatientModalProps> = ({
 
         <div className="modal-body">
           {error && (
-            <div className="error-message">
+            <div className="error-message-clean">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="12" cy="12" r="10"/>
                 <line x1="12" y1="8" x2="12" y2="12"/>
@@ -104,53 +111,51 @@ const ArchivePatientModal: React.FC<ArchivePatientModalProps> = ({
             </div>
           )}
 
-          {/* Patient Summary */}
-          <div className="patient-summary-card">
-            <div className="summary-header">
-              <div className="patient-avatar">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                  <circle cx="12" cy="7" r="4"/>
-                </svg>
+          {/* Patient Summary - Clean Design */}
+          <div className="patient-summary-clean">
+            <div className="patient-avatar-clean">
+              <span className="avatar-initials-clean">{getInitials()}</span>
+            </div>
+            <div className="patient-info-clean">
+              <h3 className="patient-name-clean">
+                {patient.first_name} {patient.middle_name ? `${patient.middle_name} ` : ''}{patient.last_name}
+              </h3>
+              <div className="patient-id-clean">
+                Patient ID: {patient.patient_id}
               </div>
-              <div className="patient-details">
-                <h3>{patient.first_name} {patient.middle_name ? `${patient.middle_name} ` : ''}{patient.last_name}</h3>
-                <p className="patient-id">Patient ID: {patient.patient_id}</p>
-                <div className="patient-meta">
-                  <span className="patient-type">{patient.patient_type}</span>
-                  <span className="patient-sex">{patient.sex}</span>
-                  {patient.age && <span className="patient-age">Age {patient.age}</span>}
-                </div>
+              <div className="patient-meta-clean">
+                <span className="meta-badge type-clean">{patient.patient_type}</span>
+                <span className="meta-badge sex-clean">{patient.sex}</span>
+                {patient.age && <span className="meta-badge age-clean">Age {patient.age}</span>}
               </div>
             </div>
           </div>
 
-          {/* Archive Warning */}
-          <div className="warning-message">
-            <div className="warning-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          {/* Archive Warning - Clean Styling */}
+          <div className="warning-section-clean">
+            <div className="warning-header-clean">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
                 <line x1="12" y1="9" x2="12" y2="13"/>
                 <line x1="12" y1="17" x2="12.01" y2="17"/>
               </svg>
-            </div>
-            <div className="warning-content">
               <h4>Important Notice</h4>
-              <ul>
-                <li>This patient record will be moved to the archives</li>
-                <li>The patient will no longer appear in active patient lists</li>
-                <li>All consultation history and medical records will be preserved</li>
-                <li>You can restore the patient from the archives at any time</li>
-                <li>No new consultations can be started for archived patients</li>
-              </ul>
             </div>
+            <ul className="warning-list-clean">
+              <li>This patient record will be moved to the archives</li>
+              <li>The patient will no longer appear in active patient lists</li>
+              <li>All consultation history and medical records will be preserved</li>
+              <li>You can restore the patient from the archives at any time</li>
+              <li>No new consultations can be started for archived patients</li>
+            </ul>
           </div>
 
           {/* Archive Reason */}
           <div className="form-section">
             <div className="form-group">
-              <label>Reason for Archiving <span className="required">*</span></label>
+              <label className="form-label-clean">Reason for Archiving <span className="required">*</span></label>
               <textarea
+                className="archive-textarea-clean"
                 placeholder="Please provide a reason for archiving this patient (e.g., patient transferred, treatment completed, etc.)"
                 value={archiveReason}
                 onChange={(e) => setArchiveReason(e.target.value)}
@@ -161,17 +166,17 @@ const ArchivePatientModal: React.FC<ArchivePatientModalProps> = ({
           </div>
         </div>
 
-        <div className="modal-footer">
-          <button className="btn-secondary" onClick={handleClose} disabled={loading}>
+        <div className="modal-footer archive-footer">
+          <button className="btn-cancel-clean" onClick={handleClose} disabled={loading}>
             Cancel
           </button>
           <button
-            className="btn-warning"
+            className="btn-archive-clean"
             onClick={handleArchivePatient}
             disabled={loading || !archiveReason.trim()}
           >
             {loading ? (
-              <span className="loading-spinner">Archiving...</span>
+              <span className="loading-spinner-clean">Archiving...</span>
             ) : (
               <>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
